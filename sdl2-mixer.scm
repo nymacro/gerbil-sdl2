@@ -3,15 +3,15 @@
 
 (c-declare "#include \"SDL_mixer.h\"")
 
-(c-define-constants
- MIX_INIT_FLAC
- MIX_INIT_MOD
- MIX_INIT_MP3
- MIX_INIT_OGG
+;; (c-define-constants
+;;  MIX_INIT_FLAC
+;;  MIX_INIT_MOD
+;;  MIX_INIT_MP3
+;;  MIX_INIT_OGG
 
- MIX_DEFAULT_FREQUENCY
- MIX_DEFAULT_FORMAT
- )
+;;  MIX_DEFAULT_FREQUENCY
+;;  MIX_DEFAULT_FORMAT
+;;  )
 
 (c-define-type Mix_Chunk (struct "Mix_Chunk"))
 (c-define-type Mix_Chunk* (pointer Mix_Chunk))
