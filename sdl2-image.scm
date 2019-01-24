@@ -3,10 +3,10 @@
 
 (c-declare "#include \"SDL_image.h\"")
 
-;; (c-define-constants
-;;  IMG_INIT_JPG
-;;  IMG_INIT_PNG
-;;  IMG_INIT_TIF)
+(c-define-constants
+ IMG_INIT_JPG
+ IMG_INIT_PNG
+ IMG_INIT_TIF)
 
 ;;! IMG_GetError
 (define IMG_GetError

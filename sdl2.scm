@@ -34,30 +34,6 @@
 
 (##include "sdl2-prelude.scm")
 
-;; TODO find a more effective way of mapping constants than c-lambda
-;; (define-syntax c-define-constants
-;;   (syntax-rules ()
-;;     ((c-define-constants x)
-;;      (define x (c-lambda () unsigned-int
-;;                    (string-append "___result = " (object->string (quote x)) ";"))))
-;;     ((c-define-constants x xs ...)
-;;      (begin
-;;        (c-define-constants x)
-;;        (c-define-constants xs ...)))))
-
-;; TODO how to expand multiple expressions into the top-level?
-;; (define-syntax c-define-constants
-;;   (lambda (e)
-;;     (syntax-case e ()
-;;       ((c-define-constants x)
-;;        (let ((string-upcase (lambda (x) (list->string (map char-upcase (string->list x))))))
-;;          #`(define x (c-lambda () unsigned-int
-;;                        #,(string-append "___result = " (string-upcase (symbol->string (syntax-object->datum #'x))) ";")))))
-;;       ((c-define-constants x xs ...)
-;;        #'(##begin
-;;            (c-define-constants x)
-;;            (c-define-constants xs ...))))))
-
 (define-macro (c-define-constants . consts)
   (let ((to-c-lambda (lambda (const)
                        (let ((wrapper (string->symbol
@@ -1398,21 +1374,21 @@
 ;;   (define SDL_AndroidGetInternalStoragePath (c-lambda () nonnull-char-string "SDL_AndroidGetInternalStoragePath"))
 ;;   (define SDL_AndroidGetJNIEnv (c-lambda () void* "SDL_AndroidGetJNIEnv")))
 ;;  (else #!void))
-;; (cond-expand
-;;  (sdl:atomic
-;;   (define SDL_AtomicAdd (c-lambda (SDL_atomic_t* int) int "SDL_AtomicAdd"))
-;;   (define SDL_AtomicCAS (c-lambda (SDL_atomic_t* int int) SDL_bool "SDL_AtomicCAS"))
-;;   (define SDL_AtomicCASPtr (c-lambda (void** void* void*) SDL_bool "SDL_AtomicCASPtr"))
-;;   (define SDL_AtomicDecRef (c-lambda (SDL_atomic_t*) SDL_bool "SDL_AtomicDecRef"))
-;;   (define SDL_AtomicGet (c-lambda (SDL_atomic_t*) int "SDL_AtomicGet"))
-;;   (define SDL_AtomicGetPtr (c-lambda (void**) void* "SDL_AtomicGetPtr"))
-;;   (define SDL_AtomicIncRef (c-lambda (SDL_atomic_t*) void "SDL_AtomicIncRef"))
-;;   (define SDL_AtomicLock (c-lambda (SDL_SpinLock*) void "SDL_AtomicLock"))
-;;   (define SDL_AtomicSet (c-lambda (SDL_atomic_t* int) int "SDL_AtomicSet"))
-;;   (define SDL_AtomicSetPtr (c-lambda (void** void*) void* "SDL_AtomicSetPtr"))
-;;   (define SDL_AtomicTryLock (c-lambda (SDL_SpinLock*) SDL_bool "SDL_AtomicTryLock"))
-;;   (define SDL_AtomicUnlock (c-lambda (SDL_SpinLock*) void "SDL_AtomicUnlock")))
-;;  (else #!void))
+(cond-expand
+ (sdl:atomic
+  (define SDL_AtomicAdd (c-lambda (SDL_atomic_t* int) int "SDL_AtomicAdd"))
+  (define SDL_AtomicCAS (c-lambda (SDL_atomic_t* int int) SDL_bool "SDL_AtomicCAS"))
+  (define SDL_AtomicCASPtr (c-lambda (void** void* void*) SDL_bool "SDL_AtomicCASPtr"))
+  (define SDL_AtomicDecRef (c-lambda (SDL_atomic_t*) SDL_bool "SDL_AtomicDecRef"))
+  (define SDL_AtomicGet (c-lambda (SDL_atomic_t*) int "SDL_AtomicGet"))
+  (define SDL_AtomicGetPtr (c-lambda (void**) void* "SDL_AtomicGetPtr"))
+  (define SDL_AtomicIncRef (c-lambda (SDL_atomic_t*) void "SDL_AtomicIncRef"))
+  (define SDL_AtomicLock (c-lambda (SDL_SpinLock*) void "SDL_AtomicLock"))
+  (define SDL_AtomicSet (c-lambda (SDL_atomic_t* int) int "SDL_AtomicSet"))
+  (define SDL_AtomicSetPtr (c-lambda (void** void*) void* "SDL_AtomicSetPtr"))
+  (define SDL_AtomicTryLock (c-lambda (SDL_SpinLock*) SDL_bool "SDL_AtomicTryLock"))
+  (define SDL_AtomicUnlock (c-lambda (SDL_SpinLock*) void "SDL_AtomicUnlock")))
+ (else #!void))
 (define SDL_AudioInit (c-lambda (nonnull-char-string) int "SDL_AudioInit"))
 (define SDL_AudioQuit (c-lambda () void "SDL_AudioQuit"))
 (define SDL_BlitScaled (c-lambda (SDL_Surface* SDL_Rect* SDL_Surface* SDL_Rect*) int "SDL_BlitScaled"))
@@ -1444,32 +1420,32 @@
 (define SDL_CreateSystemCursor (c-lambda (SDL_SystemCursor) SDL_Cursor* "SDL_CreateSystemCursor"))
 (define SDL_CreateTexture (c-lambda (SDL_Renderer* unsigned-int32 int int int) SDL_Texture* "SDL_CreateTexture"))
 (define SDL_CreateTextureFromSurface (c-lambda (SDL_Renderer* SDL_Surface*) SDL_Texture* "SDL_CreateTextureFromSurface"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_CreateThread (c-lambda (SDL_ThreadFunction nonnull-char-string void*) SDL_Thread* "SDL_CreateThread")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_CreateThread (c-lambda (SDL_ThreadFunction nonnull-char-string void*) SDL_Thread* "SDL_CreateThread")))
+ (else #!void))
 (define SDL_CreateWindow (c-lambda (nonnull-char-string int int int int unsigned-int32) SDL_Window* "SDL_CreateWindow"))
 (define SDL_CreateWindowAndRenderer (c-lambda (int int unsigned-int32 SDL_Window** SDL_Renderer**) int "SDL_CreateWindowAndRenderer"))
 (define SDL_CreateWindowFrom (c-lambda (void*) SDL_Window* "SDL_CreateWindowFrom"))
 (define SDL_DelEventWatch (c-lambda (SDL_EventFilter void*) void "SDL_DelEventWatch"))
 (define SDL_DelHintCallback (c-lambda (nonnull-char-string SDL_HintCallback void*) void "SDL_DelHintCallback"))
 (define SDL_Delay (c-lambda (unsigned-int32) void "SDL_Delay"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_DestroyCond (c-lambda (SDL_cond*) void "SDL_DestroyCond"))
-;;   (define SDL_DestroyMutex (c-lambda (SDL_mutex*) void "SDL_DestroyMutex")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_DestroyCond (c-lambda (SDL_cond*) void "SDL_DestroyCond"))
+  (define SDL_DestroyMutex (c-lambda (SDL_mutex*) void "SDL_DestroyMutex")))
+ (else #!void))
 (define SDL_DestroyRenderer (c-lambda (SDL_Renderer*) void "SDL_DestroyRenderer"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_DestroySemaphore (c-lambda (SDL_sem*) void "SDL_DestroySemaphore")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_DestroySemaphore (c-lambda (SDL_sem*) void "SDL_DestroySemaphore")))
+ (else #!void))
 (define SDL_DestroyTexture (c-lambda (SDL_Texture*) void "SDL_DestroyTexture"))
 (define SDL_DestroyWindow (c-lambda (SDL_Window*) void "SDL_DestroyWindow"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_DetachThread (c-lambda (SDL_Thread*) void "SDL_DetachThread")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_DetachThread (c-lambda (SDL_Thread*) void "SDL_DetachThread")))
+ (else #!void))
 (define SDL_DisableScreenSaver (c-lambda () void "SDL_DisableScreenSaver"))
 (define SDL_EnableScreenSaver (c-lambda () void "SDL_EnableScreenSaver"))
 (define SDL_EnclosePoints (c-lambda (SDL_Point* int SDL_Rect* SDL_Rect*) SDL_bool "SDL_EnclosePoints"))
@@ -1503,37 +1479,37 @@
 (define SDL_GL_SwapWindow (c-lambda (SDL_Window*) void "SDL_GL_SwapWindow"))
 (define SDL_GL_UnbindTexture (c-lambda (SDL_Texture*) int "SDL_GL_UnbindTexture"))
 (define SDL_GL_UnloadLibrary (c-lambda () void "SDL_GL_UnloadLibrary"))
-;; (cond-expand
-;;  (sdl:game-controller
-;;   (define SDL_GameControllerAddMapping (c-lambda (nonnull-char-string) int "SDL_GameControllerAddMapping"))
-;;   (define SDL_GameControllerAddMappingsFromFile (c-lambda (nonnull-char-string) int "SDL_GameControllerAddMappingsFromFile"))
-;;   (define SDL_GameControllerAddMappingsFromRW (c-lambda (SDL_RWops* int) int "SDL_GameControllerAddMappingsFromRW"))
-;;   (define SDL_GameControllerClose (c-lambda (SDL_GameController*) void "SDL_GameControllerClose"))
-;;   (define SDL_GameControllerEventState (c-lambda (int) int "SDL_GameControllerEventState"))
-;;   (define SDL_GameControllerGetAttached (c-lambda (SDL_GameController*) SDL_bool "SDL_GameControllerGetAttached"))
-;;   (define SDL_GameControllerGetAxis (c-lambda (SDL_GameController* SDL_GameControllerAxis) int16 "SDL_GameControllerGetAxis"))
-;;   (define SDL_GameControllerGetAxisFromString (c-lambda (nonnull-char-string) SDL_GameControllerAxis "SDL_GameControllerGetAxisFromString"))
-;;   (define SDL_GameControllerGetBindForAxis (c-lambda (SDL_GameController* SDL_GameControllerAxis) SDL_GameControllerButtonBind "SDL_GameControllerGetBindForAxis"))
-;;   (define SDL_GameControllerGetBindForButton (c-lambda (SDL_GameController* SDL_GameControllerButton) SDL_GameControllerButtonBind "SDL_GameControllerGetBindForButton"))
-;;   (define SDL_GameControllerGetButton (c-lambda (SDL_GameController* SDL_GameControllerButton) unsigned-int8 "SDL_GameControllerGetButton"))
-;;   (define SDL_GameControllerGetButtonFromString (c-lambda (nonnull-char-string) SDL_GameControllerButton "SDL_GameControllerGetButtonFromString"))
-;;   (cond-expand
-;;    (sdl:joystick
-;;     (define SDL_GameControllerGetJoystick (c-lambda (SDL_GameController*) SDL_Joystick* "SDL_GameControllerGetJoystick")))
-;;    (else #!void))
-;;   (define SDL_GameControllerGetStringForAxis (c-lambda (SDL_GameControllerAxis) nonnull-char-string "SDL_GameControllerGetStringForAxis"))
-;;   (define SDL_GameControllerGetStringForButton (c-lambda (SDL_GameControllerButton) nonnull-char-string "SDL_GameControllerGetStringForButton"))
-;;   (define SDL_GameControllerMapping (c-lambda (SDL_GameController*) nonnull-char-string "SDL_GameControllerMapping"))
-;;   ;;(define SDL_GameControllerMappingForGUID (c-lambda (SDL_JoystickGUID) nonnull-char-string "SDL_GameControllerMappingForGUID"))
-;;   (define SDL_GameControllerName (c-lambda (SDL_GameController*) nonnull-char-string "SDL_GameControllerName"))
-;;   (define SDL_GameControllerNameForIndex (c-lambda (int) nonnull-char-string "SDL_GameControllerNameForIndex"))
-;;   (define SDL_GameControllerOpen (c-lambda (int) SDL_GameController* "SDL_GameControllerOpen"))
-;;   (define SDL_GameControllerUpdate (c-lambda () void "SDL_GameControllerUpdate")))
-;;  (else #!void))
-;; (cond-expand
-;;  (sdl:assert
-;;   (define SDL_GetAssertionReport (c-lambda () SDL_assert_data* "SDL_GetAssertionReport")))
-;;  (else #!void))
+(cond-expand
+ (sdl:game-controller
+  (define SDL_GameControllerAddMapping (c-lambda (nonnull-char-string) int "SDL_GameControllerAddMapping"))
+  (define SDL_GameControllerAddMappingsFromFile (c-lambda (nonnull-char-string) int "SDL_GameControllerAddMappingsFromFile"))
+  (define SDL_GameControllerAddMappingsFromRW (c-lambda (SDL_RWops* int) int "SDL_GameControllerAddMappingsFromRW"))
+  (define SDL_GameControllerClose (c-lambda (SDL_GameController*) void "SDL_GameControllerClose"))
+  (define SDL_GameControllerEventState (c-lambda (int) int "SDL_GameControllerEventState"))
+  (define SDL_GameControllerGetAttached (c-lambda (SDL_GameController*) SDL_bool "SDL_GameControllerGetAttached"))
+  (define SDL_GameControllerGetAxis (c-lambda (SDL_GameController* SDL_GameControllerAxis) int16 "SDL_GameControllerGetAxis"))
+  (define SDL_GameControllerGetAxisFromString (c-lambda (nonnull-char-string) SDL_GameControllerAxis "SDL_GameControllerGetAxisFromString"))
+  (define SDL_GameControllerGetBindForAxis (c-lambda (SDL_GameController* SDL_GameControllerAxis) SDL_GameControllerButtonBind "SDL_GameControllerGetBindForAxis"))
+  (define SDL_GameControllerGetBindForButton (c-lambda (SDL_GameController* SDL_GameControllerButton) SDL_GameControllerButtonBind "SDL_GameControllerGetBindForButton"))
+  (define SDL_GameControllerGetButton (c-lambda (SDL_GameController* SDL_GameControllerButton) unsigned-int8 "SDL_GameControllerGetButton"))
+  (define SDL_GameControllerGetButtonFromString (c-lambda (nonnull-char-string) SDL_GameControllerButton "SDL_GameControllerGetButtonFromString"))
+  (cond-expand
+   (sdl:joystick
+    (define SDL_GameControllerGetJoystick (c-lambda (SDL_GameController*) SDL_Joystick* "SDL_GameControllerGetJoystick")))
+   (else #!void))
+  (define SDL_GameControllerGetStringForAxis (c-lambda (SDL_GameControllerAxis) nonnull-char-string "SDL_GameControllerGetStringForAxis"))
+  (define SDL_GameControllerGetStringForButton (c-lambda (SDL_GameControllerButton) nonnull-char-string "SDL_GameControllerGetStringForButton"))
+  (define SDL_GameControllerMapping (c-lambda (SDL_GameController*) nonnull-char-string "SDL_GameControllerMapping"))
+  ;;(define SDL_GameControllerMappingForGUID (c-lambda (SDL_JoystickGUID) nonnull-char-string "SDL_GameControllerMappingForGUID"))
+  (define SDL_GameControllerName (c-lambda (SDL_GameController*) nonnull-char-string "SDL_GameControllerName"))
+  (define SDL_GameControllerNameForIndex (c-lambda (int) nonnull-char-string "SDL_GameControllerNameForIndex"))
+  (define SDL_GameControllerOpen (c-lambda (int) SDL_GameController* "SDL_GameControllerOpen"))
+  (define SDL_GameControllerUpdate (c-lambda () void "SDL_GameControllerUpdate")))
+ (else #!void))
+(cond-expand
+ (sdl:assert
+  (define SDL_GetAssertionReport (c-lambda () SDL_assert_data* "SDL_GetAssertionReport")))
+ (else #!void))
 (define SDL_GetAudioDeviceName (c-lambda (int int) nonnull-char-string "SDL_GetAudioDeviceName"))
 (define SDL_GetAudioDeviceStatus (c-lambda (SDL_AudioDeviceID) SDL_AudioStatus "SDL_GetAudioDeviceStatus"))
 (define SDL_GetAudioDriver (c-lambda (int) nonnull-char-string "SDL_GetAudioDriver"))
@@ -1550,10 +1526,10 @@
 (define SDL_GetCurrentVideoDriver (c-lambda () nonnull-char-string "SDL_GetCurrentVideoDriver"))
 (define SDL_GetCursor (c-lambda () SDL_Cursor* "SDL_GetCursor"))
 (define SDL_GetDefaultCursor (c-lambda () SDL_Cursor* "SDL_GetDefaultCursor"))
-;; (cond-expand
-;;  (sdl:assert
-;;   (define SDL_GetDefaultAssertionHandler (c-lambda () SDL_AssertionHandler "SDL_GetDefaultAssertionHandler")))
-;;  (else #!void))
+(cond-expand
+ (sdl:assert
+  (define SDL_GetDefaultAssertionHandler (c-lambda () SDL_AssertionHandler "SDL_GetDefaultAssertionHandler")))
+ (else #!void))
 (define SDL_GetDesktopDisplayMode (c-lambda (int SDL_DisplayMode*) int "SDL_GetDesktopDisplayMode"))
 (define SDL_GetDisplayBounds (c-lambda (int SDL_Rect*) int "SDL_GetDisplayBounds"))
 (define SDL_GetDisplayMode (c-lambda (int int SDL_DisplayMode*) int "SDL_GetDisplayMode"))
@@ -1606,11 +1582,11 @@
 (define SDL_GetTextureAlphaMod (c-lambda (SDL_Texture* unsigned-int8*) int "SDL_GetTextureAlphaMod"))
 (define SDL_GetTextureBlendMode (c-lambda (SDL_Texture* SDL_BlendMode*) int "SDL_GetTextureBlendMode"))
 (define SDL_GetTextureColorMod (c-lambda (SDL_Texture* unsigned-int8* unsigned-int8* unsigned-int8*) int "SDL_GetTextureColorMod"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_GetThreadID (c-lambda (SDL_Thread*) SDL_threadID "SDL_GetThreadID"))
-;;   (define SDL_GetThreadName (c-lambda (SDL_Thread*) nonnull-char-string "SDL_GetThreadName")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_GetThreadID (c-lambda (SDL_Thread*) SDL_threadID "SDL_GetThreadID"))
+  (define SDL_GetThreadName (c-lambda (SDL_Thread*) nonnull-char-string "SDL_GetThreadName")))
+ (else #!void))
 (define SDL_GetTicks (c-lambda () unsigned-int32 "SDL_GetTicks"))
 (define SDL_GetTouchDevice (c-lambda (int) SDL_TouchID "SDL_GetTouchDevice"))
 (define SDL_GetTouchFinger (c-lambda (SDL_TouchID int) SDL_Finger* "SDL_GetTouchFinger"))
@@ -1633,39 +1609,39 @@
 (define SDL_GetWindowSurface (c-lambda (SDL_Window*) SDL_Surface* "SDL_GetWindowSurface"))
 (define SDL_GetWindowTitle (c-lambda (SDL_Window*) nonnull-char-string "SDL_GetWindowTitle"))
 (define SDL_GetWindowWMInfo (c-lambda (SDL_Window* SDL_SysWMinfo*) SDL_bool "SDL_GetWindowWMInfo"))
-;; (cond-expand
-;;  (sdl:haptic
-;;   (define SDL_HapticClose (c-lambda (SDL_Haptic*) void "SDL_HapticClose"))
-;;   (define SDL_HapticDestroyEffect (c-lambda (SDL_Haptic* int) void "SDL_HapticDestroyEffect"))
-;;   (define SDL_HapticEffectSupported (c-lambda (SDL_Haptic* SDL_HapticEffect*) int "SDL_HapticEffectSupported"))
-;;   (define SDL_HapticGetEffectStatus (c-lambda (SDL_Haptic* int) int "SDL_HapticGetEffectStatus"))
-;;   (define SDL_HapticIndex (c-lambda (SDL_Haptic*) int "SDL_HapticIndex"))
-;;   (define SDL_HapticName (c-lambda (int) nonnull-char-string "SDL_HapticName"))
-;;   (define SDL_HapticNewEffect (c-lambda (SDL_Haptic* SDL_HapticEffect*) int "SDL_HapticNewEffect"))
-;;   (define SDL_HapticNumAxes (c-lambda (SDL_Haptic*) int "SDL_HapticNumAxes"))
-;;   (define SDL_HapticNumEffects (c-lambda (SDL_Haptic*) int "SDL_HapticNumEffects"))
-;;   (define SDL_HapticNumEffectsPlaying (c-lambda (SDL_Haptic*) int "SDL_HapticNumEffectsPlaying"))
-;;   (define SDL_HapticOpen (c-lambda (int) SDL_Haptic* "SDL_HapticOpen"))
-;;   (cond-expand
-;;    (sdl:joystick
-;;     (define SDL_HapticOpenFromJoystick (c-lambda (SDL_Joystick*) SDL_Haptic* "SDL_HapticOpenFromJoystick")))
-;;    (else #!void))
-;;   (define SDL_HapticOpenFromMouse (c-lambda () SDL_Haptic* "SDL_HapticOpenFromMouse"))
-;;   (define SDL_HapticOpened (c-lambda (int) int "SDL_HapticOpened"))
-;;   (define SDL_HapticPause (c-lambda (SDL_Haptic*) int "SDL_HapticPause"))
-;;   (define SDL_HapticQuery (c-lambda (SDL_Haptic*) unsigned-int "SDL_HapticQuery"))
-;;   (define SDL_HapticRumbleInit (c-lambda (SDL_Haptic*) int "SDL_HapticRumbleInit"))
-;;   (define SDL_HapticRumblePlay (c-lambda (SDL_Haptic* float unsigned-int32) int "SDL_HapticRumblePlay"))
-;;   (define SDL_HapticRumbleStop (c-lambda (SDL_Haptic*) int "SDL_HapticRumbleStop"))
-;;   (define SDL_HapticRumbleSupported (c-lambda (SDL_Haptic*) int "SDL_HapticRumbleSupported"))
-;;   (define SDL_HapticRunEffect (c-lambda (SDL_Haptic* int unsigned-int32) int "SDL_HapticRunEffect"))
-;;   (define SDL_HapticSetAutocenter (c-lambda (SDL_Haptic* int) int "SDL_HapticSetAutocenter"))
-;;   (define SDL_HapticSetGain (c-lambda (SDL_Haptic* int) int "SDL_HapticSetGain"))
-;;   (define SDL_HapticStopAll (c-lambda (SDL_Haptic*) int "SDL_HapticStopAll"))
-;;   (define SDL_HapticStopEffect (c-lambda (SDL_Haptic* int) int "SDL_HapticStopEffect"))
-;;   (define SDL_HapticUnpause (c-lambda (SDL_Haptic*) int "SDL_HapticUnpause"))
-;;   (define SDL_HapticUpdateEffect (c-lambda (SDL_Haptic* int SDL_HapticEffect*) int "SDL_HapticUpdateEffect")))
-;;  (else #!void))
+(cond-expand
+ (sdl:haptic
+  (define SDL_HapticClose (c-lambda (SDL_Haptic*) void "SDL_HapticClose"))
+  (define SDL_HapticDestroyEffect (c-lambda (SDL_Haptic* int) void "SDL_HapticDestroyEffect"))
+  (define SDL_HapticEffectSupported (c-lambda (SDL_Haptic* SDL_HapticEffect*) int "SDL_HapticEffectSupported"))
+  (define SDL_HapticGetEffectStatus (c-lambda (SDL_Haptic* int) int "SDL_HapticGetEffectStatus"))
+  (define SDL_HapticIndex (c-lambda (SDL_Haptic*) int "SDL_HapticIndex"))
+  (define SDL_HapticName (c-lambda (int) nonnull-char-string "SDL_HapticName"))
+  (define SDL_HapticNewEffect (c-lambda (SDL_Haptic* SDL_HapticEffect*) int "SDL_HapticNewEffect"))
+  (define SDL_HapticNumAxes (c-lambda (SDL_Haptic*) int "SDL_HapticNumAxes"))
+  (define SDL_HapticNumEffects (c-lambda (SDL_Haptic*) int "SDL_HapticNumEffects"))
+  (define SDL_HapticNumEffectsPlaying (c-lambda (SDL_Haptic*) int "SDL_HapticNumEffectsPlaying"))
+  (define SDL_HapticOpen (c-lambda (int) SDL_Haptic* "SDL_HapticOpen"))
+  (cond-expand
+   (sdl:joystick
+    (define SDL_HapticOpenFromJoystick (c-lambda (SDL_Joystick*) SDL_Haptic* "SDL_HapticOpenFromJoystick")))
+   (else #!void))
+  (define SDL_HapticOpenFromMouse (c-lambda () SDL_Haptic* "SDL_HapticOpenFromMouse"))
+  (define SDL_HapticOpened (c-lambda (int) int "SDL_HapticOpened"))
+  (define SDL_HapticPause (c-lambda (SDL_Haptic*) int "SDL_HapticPause"))
+  (define SDL_HapticQuery (c-lambda (SDL_Haptic*) unsigned-int "SDL_HapticQuery"))
+  (define SDL_HapticRumbleInit (c-lambda (SDL_Haptic*) int "SDL_HapticRumbleInit"))
+  (define SDL_HapticRumblePlay (c-lambda (SDL_Haptic* float unsigned-int32) int "SDL_HapticRumblePlay"))
+  (define SDL_HapticRumbleStop (c-lambda (SDL_Haptic*) int "SDL_HapticRumbleStop"))
+  (define SDL_HapticRumbleSupported (c-lambda (SDL_Haptic*) int "SDL_HapticRumbleSupported"))
+  (define SDL_HapticRunEffect (c-lambda (SDL_Haptic* int unsigned-int32) int "SDL_HapticRunEffect"))
+  (define SDL_HapticSetAutocenter (c-lambda (SDL_Haptic* int) int "SDL_HapticSetAutocenter"))
+  (define SDL_HapticSetGain (c-lambda (SDL_Haptic* int) int "SDL_HapticSetGain"))
+  (define SDL_HapticStopAll (c-lambda (SDL_Haptic*) int "SDL_HapticStopAll"))
+  (define SDL_HapticStopEffect (c-lambda (SDL_Haptic* int) int "SDL_HapticStopEffect"))
+  (define SDL_HapticUnpause (c-lambda (SDL_Haptic*) int "SDL_HapticUnpause"))
+  (define SDL_HapticUpdateEffect (c-lambda (SDL_Haptic* int SDL_HapticEffect*) int "SDL_HapticUpdateEffect")))
+ (else #!void))
 (define SDL_Has3DNow (c-lambda () SDL_bool "SDL_Has3DNow"))
 (define SDL_HasAltiVec (c-lambda () SDL_bool "SDL_HasAltiVec"))
 (define SDL_HasAVX (c-lambda () SDL_bool "SDL_HasAVX"))
@@ -1698,30 +1674,30 @@
 (define SDL_IsScreenKeyboardShown (c-lambda (SDL_Window*) SDL_bool "SDL_IsScreenKeyboardShown"))
 (define SDL_IsScreenSaverEnabled (c-lambda () SDL_bool "SDL_IsScreenSaverEnabled"))
 (define SDL_IsTextInputActive (c-lambda () SDL_bool "SDL_IsTextInputActive"))
-;; (cond-expand
-;;  (sdl:joystick
-;;   (define SDL_JoystickClose (c-lambda (SDL_Joystick*) void "SDL_JoystickClose"))
-;;   (define SDL_JoystickEventState (c-lambda (int) int "SDL_JoystickEventState"))
-;;   (define SDL_JoystickGetAttached (c-lambda (SDL_Joystick*) SDL_bool "SDL_JoystickGetAttached"))
-;;   (define SDL_JoystickGetAxis (c-lambda (SDL_Joystick* int) int16 "SDL_JoystickGetAxis"))
-;;   (define SDL_JoystickGetBall (c-lambda (SDL_Joystick* int int* int*) int "SDL_JoystickGetBall"))
-;;   (define SDL_JoystickGetButton (c-lambda (SDL_Joystick* int) unsigned-int8 "SDL_JoystickGetButton"))
-;;   ;; (define SDL_JoystickGetDeviceGUID (c-lambda (int) SDL_JoystickGUID "SDL_JoystickGetDeviceGUID"))
-;;   ;; (define SDL_JoystickGetGUID (c-lambda (SDL_Joystick*) SDL_JoystickGUID "SDL_JoystickGetGUID"))
-;;   ;; (define SDL_JoystickGetGUIDFromString (c-lambda (nonnull-char-string) SDL_JoystickGUID "SDL_JoystickGetGUIDFromString"))
-;;   ;; (define SDL_JoystickGetGUIDString (c-lambda (SDL_JoystickGUID nonnull-char-string int) void "SDL_JoystickGetGUIDString"))
-;;   (define SDL_JoystickGetHat (c-lambda (SDL_Joystick* int) unsigned-int8 "SDL_JoystickGetHat"))
-;;   (define SDL_JoystickInstanceID (c-lambda (SDL_Joystick*) SDL_JoystickID "SDL_JoystickInstanceID"))
-;;   (define SDL_JoystickIsHaptic (c-lambda (SDL_Joystick*) int "SDL_JoystickIsHaptic"))
-;;   (define SDL_JoystickName (c-lambda (SDL_Joystick*) nonnull-char-string "SDL_JoystickName"))
-;;   (define SDL_JoystickNameForIndex (c-lambda (int) nonnull-char-string "SDL_JoystickNameForIndex"))
-;;   (define SDL_JoystickNumAxes (c-lambda (SDL_Joystick*) int "SDL_JoystickNumAxes"))
-;;   (define SDL_JoystickNumBalls (c-lambda (SDL_Joystick*) int "SDL_JoystickNumBalls"))
-;;   (define SDL_JoystickNumButtons (c-lambda (SDL_Joystick*) int "SDL_JoystickNumButtons"))
-;;   (define SDL_JoystickNumHats (c-lambda (SDL_Joystick*) int "SDL_JoystickNumHats"))
-;;   (define SDL_JoystickOpen (c-lambda (int) SDL_Joystick* "SDL_JoystickOpen"))
-;;   (define SDL_JoystickUpdate (c-lambda () void "SDL_JoystickUpdate")))
-;;  (else #!void))
+(cond-expand
+ (sdl:joystick
+  (define SDL_JoystickClose (c-lambda (SDL_Joystick*) void "SDL_JoystickClose"))
+  (define SDL_JoystickEventState (c-lambda (int) int "SDL_JoystickEventState"))
+  (define SDL_JoystickGetAttached (c-lambda (SDL_Joystick*) SDL_bool "SDL_JoystickGetAttached"))
+  (define SDL_JoystickGetAxis (c-lambda (SDL_Joystick* int) int16 "SDL_JoystickGetAxis"))
+  (define SDL_JoystickGetBall (c-lambda (SDL_Joystick* int int* int*) int "SDL_JoystickGetBall"))
+  (define SDL_JoystickGetButton (c-lambda (SDL_Joystick* int) unsigned-int8 "SDL_JoystickGetButton"))
+  ;; (define SDL_JoystickGetDeviceGUID (c-lambda (int) SDL_JoystickGUID "SDL_JoystickGetDeviceGUID"))
+  ;; (define SDL_JoystickGetGUID (c-lambda (SDL_Joystick*) SDL_JoystickGUID "SDL_JoystickGetGUID"))
+  ;; (define SDL_JoystickGetGUIDFromString (c-lambda (nonnull-char-string) SDL_JoystickGUID "SDL_JoystickGetGUIDFromString"))
+  ;; (define SDL_JoystickGetGUIDString (c-lambda (SDL_JoystickGUID nonnull-char-string int) void "SDL_JoystickGetGUIDString"))
+  (define SDL_JoystickGetHat (c-lambda (SDL_Joystick* int) unsigned-int8 "SDL_JoystickGetHat"))
+  (define SDL_JoystickInstanceID (c-lambda (SDL_Joystick*) SDL_JoystickID "SDL_JoystickInstanceID"))
+  (define SDL_JoystickIsHaptic (c-lambda (SDL_Joystick*) int "SDL_JoystickIsHaptic"))
+  (define SDL_JoystickName (c-lambda (SDL_Joystick*) nonnull-char-string "SDL_JoystickName"))
+  (define SDL_JoystickNameForIndex (c-lambda (int) nonnull-char-string "SDL_JoystickNameForIndex"))
+  (define SDL_JoystickNumAxes (c-lambda (SDL_Joystick*) int "SDL_JoystickNumAxes"))
+  (define SDL_JoystickNumBalls (c-lambda (SDL_Joystick*) int "SDL_JoystickNumBalls"))
+  (define SDL_JoystickNumButtons (c-lambda (SDL_Joystick*) int "SDL_JoystickNumButtons"))
+  (define SDL_JoystickNumHats (c-lambda (SDL_Joystick*) int "SDL_JoystickNumHats"))
+  (define SDL_JoystickOpen (c-lambda (int) SDL_Joystick* "SDL_JoystickOpen"))
+  (define SDL_JoystickUpdate (c-lambda () void "SDL_JoystickUpdate")))
+ (else #!void))
 (define SDL_LoadBMP (c-lambda (nonnull-char-string) SDL_Surface* "SDL_LoadBMP"))
 (define SDL_LoadBMP_RW (c-lambda (SDL_RWops* int) SDL_Surface* "SDL_LoadBMP_RW"))
 (define SDL_LoadDollarTemplates (c-lambda (SDL_TouchID SDL_RWops*) int "SDL_LoadDollarTemplates"))
@@ -1761,10 +1737,10 @@
 ;;(define SDL_MostSignificantBitIndex32 (c-lambda (unsigned-int32) int "SDL_MostSignificantBitIndex32"))
 (define SDL_MouseIsHaptic (c-lambda () int "SDL_MouseIsHaptic"))
 (define SDL_NumHaptics (c-lambda () int "SDL_NumHaptics"))
-;; (cond-expand
-;;  (sdl:joystick
-;;   (define SDL_NumJoysticks (c-lambda () int "SDL_NumJoysticks")))
-;;  (else #!void))
+(cond-expand
+ (sdl:joystick
+  (define SDL_NumJoysticks (c-lambda () int "SDL_NumJoysticks")))
+ (else #!void))
 (define SDL_OpenAudio (c-lambda (SDL_AudioSpec* SDL_AudioSpec*) int "SDL_OpenAudio"))
 (define SDL_OpenAudioDevice (c-lambda (nonnull-char-string int SDL_AudioSpec* SDL_AudioSpec* int) SDL_AudioDeviceID "SDL_OpenAudioDevice"))
 (define SDL_PauseAudio (c-lambda (int) void "SDL_PauseAudio"))
@@ -1822,27 +1798,27 @@
 (define SDL_RenderSetScale (c-lambda (SDL_Renderer* float float) int "SDL_RenderSetScale"))
 (define SDL_RenderSetViewport (c-lambda (SDL_Renderer* SDL_Rect*) int "SDL_RenderSetViewport"))
 (define SDL_RenderTargetSupported (c-lambda (SDL_Renderer*) SDL_bool "SDL_RenderTargetSupported"))
-;; (cond-expand
-;;  (sdl:assert
-;;   (define SDL_ResetAssertionReport (c-lambda () void "SDL_ResetAssertionReport")))
-;;  (else #!void))
+(cond-expand
+ (sdl:assert
+  (define SDL_ResetAssertionReport (c-lambda () void "SDL_ResetAssertionReport")))
+ (else #!void))
 (define SDL_RestoreWindow (c-lambda (SDL_Window*) void "SDL_RestoreWindow"))
 (define SDL_SaveAllDollarTemplates (c-lambda (SDL_RWops*) int "SDL_SaveAllDollarTemplates"))
 (define SDL_SaveBMP (c-lambda (SDL_Surface* nonnull-char-string) int "SDL_SaveBMP"))
 (define SDL_SaveBMP_RW (c-lambda (SDL_Surface* SDL_RWops* int) int "SDL_SaveBMP_RW"))
 (define SDL_SaveDollarTemplate (c-lambda (SDL_GestureID SDL_RWops*) int "SDL_SaveDollarTemplate"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_SemPost (c-lambda (SDL_sem*) int "SDL_SemPost"))
-;;   (define SDL_SemTryWait (c-lambda (SDL_sem*) int "SDL_SemTryWait"))
-;;   (define SDL_SemValue (c-lambda (SDL_sem*) unsigned-int32 "SDL_SemValue"))
-;;   (define SDL_SemWait (c-lambda (SDL_sem*) int "SDL_SemWait"))
-;;   (define SDL_SemWaitTimeout (c-lambda (SDL_sem* unsigned-int32) int "SDL_SemWaitTimeout")))
-;;  (else #!void))
-;; (cond-expand
-;;  (sdl:assert
-;;   (define SDL_SetAssertionHandler (c-lambda (SDL_AssertionHandler void*) void "SDL_SetAssertionHandler")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_SemPost (c-lambda (SDL_sem*) int "SDL_SemPost"))
+  (define SDL_SemTryWait (c-lambda (SDL_sem*) int "SDL_SemTryWait"))
+  (define SDL_SemValue (c-lambda (SDL_sem*) unsigned-int32 "SDL_SemValue"))
+  (define SDL_SemWait (c-lambda (SDL_sem*) int "SDL_SemWait"))
+  (define SDL_SemWaitTimeout (c-lambda (SDL_sem* unsigned-int32) int "SDL_SemWaitTimeout")))
+ (else #!void))
+(cond-expand
+ (sdl:assert
+  (define SDL_SetAssertionHandler (c-lambda (SDL_AssertionHandler void*) void "SDL_SetAssertionHandler")))
+ (else #!void))
 (define SDL_SetClipRect (c-lambda (SDL_Surface* SDL_Rect*) SDL_bool "SDL_SetClipRect"))
 (define SDL_SetClipboardText (c-lambda (nonnull-char-string) int "SDL_SetClipboardText"))
 (define SDL_SetColorKey (c-lambda (SDL_Surface* int unsigned-int32) int "SDL_SetColorKey"))
@@ -1868,10 +1844,10 @@
 (define SDL_SetTextureAlphaMod (c-lambda (SDL_Texture* unsigned-int8) int "SDL_SetTextureAlphaMod"))
 (define SDL_SetTextureBlendMode (c-lambda (SDL_Texture* SDL_BlendMode) int "SDL_SetTextureBlendMode"))
 (define SDL_SetTextureColorMod (c-lambda (SDL_Texture* unsigned-int8 unsigned-int8 unsigned-int8) int "SDL_SetTextureColorMod"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_SetThreadPriority (c-lambda (SDL_ThreadPriority) int "SDL_SetThreadPriority")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_SetThreadPriority (c-lambda (SDL_ThreadPriority) int "SDL_SetThreadPriority")))
+ (else #!void))
 (define SDL_SetWindowBordered (c-lambda (SDL_Window* SDL_bool) void "SDL_SetWindowBordered"))
 (define SDL_SetWindowBrightness (c-lambda (SDL_Window* float) int "SDL_SetWindowBrightness"))
 (define SDL_SetWindowData (c-lambda (SDL_Window* nonnull-char-string void*) void* "SDL_SetWindowData"))
@@ -1903,12 +1879,12 @@
 (define SDL_SwapLE16 (c-lambda (unsigned-int16) unsigned-int16 "SDL_SwapLE16"))
 (define SDL_SwapLE32 (c-lambda (unsigned-int32) unsigned-int32 "SDL_SwapLE32"))
 (define SDL_SwapLE64 (c-lambda (unsigned-int64) unsigned-int64 "SDL_SwapLE64"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_TLSCreate (c-lambda () SDL_TLSID "SDL_TLSCreate"))
-;;   (define SDL_TLSGet (c-lambda (SDL_TLSID) void* "SDL_TLSGet"))
-;;   (define SDL_ThreadID (c-lambda () SDL_threadID "SDL_ThreadID")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_TLSCreate (c-lambda () SDL_TLSID "SDL_TLSCreate"))
+  (define SDL_TLSGet (c-lambda (SDL_TLSID) void* "SDL_TLSGet"))
+  (define SDL_ThreadID (c-lambda () SDL_threadID "SDL_ThreadID")))
+ (else #!void))
 (define SDL_TriggerBreakpoint (c-lambda () void "SDL_TriggerBreakpoint"))
 (define SDL_TryLockMutex (c-lambda (SDL_mutex*) int "SDL_TryLockMutex"))
 (define SDL_UnionRect (c-lambda (SDL_Rect* SDL_Rect* SDL_Rect*) void "SDL_UnionRect"))
@@ -1926,10 +1902,10 @@
 (define SDL_VideoQuit (c-lambda () void "SDL_VideoQuit"))
 (define SDL_WaitEvent (c-lambda (SDL_Event*) int "SDL_WaitEvent"))
 (define SDL_WaitEventTimeout (c-lambda (SDL_Event* int) int "SDL_WaitEventTimeout"))
-;; (cond-expand
-;;  (sdl:threads
-;;   (define SDL_WaitThread (c-lambda (SDL_Thread* int*) void "SDL_WaitThread")))
-;;  (else #!void))
+(cond-expand
+ (sdl:threads
+  (define SDL_WaitThread (c-lambda (SDL_Thread* int*) void "SDL_WaitThread")))
+ (else #!void))
 (define SDL_WarpMouseInWindow (c-lambda (SDL_Window* int int) void "SDL_WarpMouseInWindow"))
 (define SDL_WasInit (c-lambda (unsigned-int32) unsigned-int32 "SDL_WasInit"))
 (define SDL_WriteBE16 (c-lambda (SDL_RWops* unsigned-int16) size-t "SDL_WriteBE16"))
@@ -1980,4 +1956,4 @@
 ;;           (*current-sdl-ios-animation-callback* params))
 
 ;; (##include "sdl2-mixer.scm")
-;; (##include "sdl2-image.scm")
+(##include "sdl2-image.scm")
