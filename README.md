@@ -1,10 +1,20 @@
-[![Spheres Release](http://img.shields.io/github/release/alvatar/sphere-core.svg)](http://schemespheres.org)
-[![Gambit Version Supported](http://img.shields.io/badge/supported Gambit version-4.7.3-blue.svg)](http://schemespheres.org)
+# Gerbil SDL2 Bindings
 
+## Installation
 
-## Installation and Quickstart
-If you have Sphere Core installed, then
+### Prerequisites
 
-    % sudo sspheres install sdl2
+* Gerbil Scheme
+* SDL2
+* SDL2_image
+* SDL2_ttf
 
-Otherwise, please read the [quickstart guide](http://www.schemespheres.org/guides/en/quickstart).
+### Build/Install
+
+```sh
+./build.ss
+```
+
+## Credits
+
+Derived from spheres-sdl2. Mangled by me.
