@@ -8,16 +8,22 @@
 ;; We need to declare these structs, otherwise we get an
 ;; incomplete type 'struct SDL_DisplayMode' error
 (c-declare #<<end-of-string
-struct SDL_DisplayMode
-{
- Uint32 format;              /**< pixel format */
-        int w;                      /**< width */
-        int h;                      /**< height */
-        int refresh_rate;           /**< refresh rate (or zero for unspecified) */
-        void *driverdata;           /**< driver-specific data, initialize to 0 */
-        };
+  struct SDL_DisplayMode
+  {
+  Uint32 format;    /**< pixel format */
+  int w;            /**< width */
+  int h;            /**< height */
+  int refresh_rate; /**< refresh rate (or zero for unspecified) */
+  void *driverdata;
+  };                /**< driver-specific data, initialize to 0 */
 end-of-string
 )
+
+;; define c-type and pointer
+(define-macro (c-define-type* name type)
+  `(begin
+     (c-define-type ,name ,type)
+     (c-define-type ,(string->symbol (string-append (symbol->string name) "*")) (pointer ,name))))
 
 ;;------------------------------------------------------------------------------
 ;;!! Types
@@ -126,40 +132,39 @@ end-of-string
 (c-define-type SDL_JoyDeviceEvent (struct "SDL_JoyDeviceEvent"))
 (c-define-type SDL_JoyHatEvent (struct "SDL_JoyHatEvent"))
 (c-define-type SDL_KeyboardEvent (struct "SDL_KeyboardEvent"))
+(c-define-type SDL_KeyboardEvent* (pointer SDL_KeyboardEvent))
 (c-define-type SDL_Keysym (struct "SDL_Keysym"))
+(c-define-type SDL_Keysym* (pointer SDL_Keysym))
 (c-define-type SDL_MouseButtonEvent (struct "SDL_MouseButtonEvent"))
-(c-define-type SDL_MouseMotionEvent (struct "SDL_MouseMotionEvent"))
-(c-define-type SDL_MouseWheelEvent (struct "SDL_MouseWheelEvent"))
-(c-define-type SDL_MultiGestureEvent (struct "SDL_MultiGestureEvent"))
+(c-define-type SDL_MouseButtonEvent* (pointer SDL_MouseButtonEvent))
+(c-define-type* SDL_MouseMotionEvent (struct "SDL_MouseMotionEvent"))
+(c-define-type* SDL_MouseWheelEvent (struct "SDL_MouseWheelEvent"))
+(c-define-type* SDL_MultiGestureEvent (struct "SDL_MultiGestureEvent"))
 (c-define-type SDL_Palette (struct "SDL_Palette"))
 (c-define-type SDL_Palette* (pointer SDL_Palette))
 (c-define-type SDL_PixelFormat (struct "SDL_PixelFormat"))
 (c-define-type SDL_PixelFormat* (pointer SDL_PixelFormat))
 (c-define-type SDL_Point (struct "SDL_Point"))
 (c-define-type SDL_Point* (pointer SDL_Point))
-(c-define-type SDL_QuitEvent (struct "SDL_QuitEvent"))
-(c-define-type SDL_Rect (struct "SDL_Rect"))
-(c-define-type SDL_Rect* (pointer SDL_Rect))
+(c-define-type* SDL_QuitEvent (struct "SDL_QuitEvent"))
+(c-define-type* SDL_Rect (struct "SDL_Rect"))
 (c-define-type SDL_RendererInfo (struct "SDL_RendererInfo"))
 (c-define-type SDL_RendererInfo* (pointer SDL_RendererInfo))
 (c-define-type SDL_Surface (struct "SDL_Surface"))
 (c-define-type SDL_Surface* (pointer SDL_Surface))
-(c-define-type SDL_SysWMEvent (struct "SDL_SysWMEvent"))
-(c-define-type SDL_SysWMinfo (struct "SDL_SysWMinfo"))
-(c-define-type SDL_SysWMinfo* (pointer SDL_SysWMinfo))
-(c-define-type SDL_SysWMmsg (struct "SDL_SysWMmsg"))
-(c-define-type SDL_TextEditingEvent (struct "SDL_TextEditingEvent"))
-(c-define-type SDL_TextInputEvent (struct "SDL_TextInputEvent"))
-(c-define-type SDL_TouchFingerEvent (struct "SDL_TouchFingerEvent"))
-(c-define-type SDL_UserEvent (struct "SDL_UserEvent"))
-(c-define-type SDL_WindowEvent (struct "SDL_WindowEvent"))
-(c-define-type SDL_assert_data (struct "SDL_assert_data"))
+(c-define-type* SDL_SysWMEvent (struct "SDL_SysWMEvent"))
+(c-define-type* SDL_SysWMinfo (struct "SDL_SysWMinfo"))
+(c-define-type* SDL_SysWMmsg (struct "SDL_SysWMmsg"))
+(c-define-type* SDL_TextEditingEvent (struct "SDL_TextEditingEvent"))
+(c-define-type* SDL_TextInputEvent (struct "SDL_TextInputEvent"))
+(c-define-type* SDL_TouchFingerEvent (struct "SDL_TouchFingerEvent"))
+(c-define-type* SDL_UserEvent (struct "SDL_UserEvent"))
+(c-define-type* SDL_WindowEvent (struct "SDL_WindowEvent"))
+(c-define-type* SDL_assert_data (struct "SDL_assert_data"))
 ;;(c-define-type SDL_atomic_t (struct "SDL_atomic_t"))
-(c-define-type SDL_version (struct "SDL_version"))
-(c-define-type SDL_version* (pointer SDL_version))
+(c-define-type* SDL_version (struct "SDL_version"))
 
-(c-define-type SDL_EventFilter (function (void* SDL_Event*) int))
-(c-define-type SDL_EventFilter* (pointer SDL_EventFilter))
+(c-define-type* SDL_EventFilter (function (void* SDL_Event*) int))
 (c-define-type SDL_HintCallback (function (void* nonnull-char-string nonnull-char-string nonnull-char-string) void))
 (c-define-type SDL_LogOutputFunction (function (void* int SDL_LogPriority nonnull-char-string) void))
 (c-define-type SDL_LogOutputFunction* (pointer SDL_LogOutputFunction))
