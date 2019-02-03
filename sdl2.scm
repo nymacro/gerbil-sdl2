@@ -42,16 +42,34 @@
 
 (define-macro (c-define-constants . consts)
   (let ((to-c-lambda (lambda (const)
-                       (let ((wrapper (string->symbol
-                                       (string-append (symbol->string const) "-wrapper"))))
-                         `(begin
-                            (define ,wrapper
-                              (c-lambda () unsigned-int
-                                ,(string-append "___result = "
-                                                (symbol->string const)
-                                                ";")))
-                            (define ,const (,wrapper)))))))
+                       `(begin
+                          (define ,const
+                            ((c-lambda () unsigned-int
+                               ,(string-append "___result = "
+                                               (symbol->string const)
+                                               ";"))))))))
     `(begin ,@(map to-c-lambda consts))))
+
+;; FIXME
+(define-macro (c-define-enum name . consts)
+  (let ((to-sym (string->symbol (string-append (symbol->string name) "#to-enum")))
+        (from-sym (string->symbol (string-append (symbol->string name) "#from-enum")))
+        (table-name (gensym name))
+        (rev-table-name (gensym name)))
+    `(begin
+       (c-define-constants ,@consts)
+
+       ;; create assoc table
+       (let ((,table-name (list->table (map (lambda (name)
+                                              (cons name (call name)))
+                                            ,consts)))
+             (,rev-table-name (list->table (map (lambda (name)
+                                                  (cons name (call name)))
+                                                ,consts))))
+         (define (,to-sym from)
+           (table-ref ,table-name from))
+         (define (,from-sym to)
+           (table-ref ,rev-table-name to))))))
 
 (define-macro (c-define-struct name . fields)
   (let* ((name-ptr (string->symbol (string-append (symbol->string name) "*")))
@@ -72,13 +90,17 @@
                                (c-lambda (,name-ptr ,field-type) void ;,field-type
                                  ,(string-append "___arg1->" field-name " = ___arg2;"))))))))
     `(begin
-       ;; type functions
-       ;; (c-define-type ,(string->symbol (string-append (symbol->string name) "*"))
-       ;;                (pointer ,name))
        (define ,constructor
-         (c-lambda () ,name-ptr
-           ,(string-append "___result = malloc(sizeof(" name-str "));")))
+         (let ((c-fn (c-lambda () ,name-ptr
+                       ,(string-append "___result = malloc(sizeof(" name-str "));"))))
+           (lambda ()
+             (let ((ptr (c-fn)))
+               (make-will ptr
+                          (lambda (obj)
+                            (displayln ,(string-append "free " name-str))))
+               ptr))))
 
+       ;; value/pointer conversions
        (define ,(string->symbol (string-append name-str "*->" name-str))
          (c-lambda (,name-ptr) ,name
            "___return(*(___arg1));"))
@@ -239,31 +261,31 @@
  SDL_HINT_NORMAL
  SDL_HINT_OVERRIDE)
 
-(define SDL_HINT_ACCELEROMETER_AS_JOYSTICK "SDL_ACCELEROMETER_AS_JOYSTICK")
-(define SDL_HINT_FRAMEBUFFER_ACCELERATION "SDL_FRAMEBUFFER_ACCELERATION")
-(define SDL_HINT_GAMECONTROLLERCONFIG "SDL_GAMECONTROLLERCONFIG")
-(define SDL_HINT_GRAB_KEYBOARD "SDL_GRAB_KEYBOARD")
-(define SDL_HINT_IDLE_TIMER_DISABLED "SDL_IDLE_TIMER_DISABLED")
-(define SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS "SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS")
-(define SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK "SDL_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK")
-(define SDL_HINT_MOUSE_RELATIVE_MODE_WARP "SDL_MOUSE_RELATIVE_MODE_WARP")
-(define SDL_HINT_ORIENTATIONS "SDL_ORIENTATIONS")
-(define SDL_HINT_RENDER_DIRECT3D_THREADSAFE "SDL_RENDER_DIRECT3D_THREADSAFE")
-(define SDL_HINT_RENDER_DRIVER "SDL_RENDER_DRIVER")
-(define SDL_HINT_RENDER_OPENGL_SHADERS "SDL_RENDER_OPENGL_SHADERS")
-(define SDL_HINT_RENDER_SCALE_QUALITY "SDL_RENDER_SCALE_QUALITY")
-(define SDL_HINT_RENDER_VSYNC "SDL_RENDER_VSYNC")
-(define SDL_HINT_TIMER_RESOLUTION "SDL_TIMER_RESOLUTION")
-(define SDL_HINT_VIDEO_ALLOW_SCREENSAVER "SDL_VIDEO_ALLOW_SCREENSAVER")
-(define SDL_HINT_VIDEO_HIGHDPI_DISABLED "SDL_VIDEO_HIGHDPI_DISABLED")
-(define SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES "SDL_VIDEO_MAC_FULLSCREEN_SPACES")
-(define SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS "SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS")
-(define SDL_HINT_VIDEO_WINDOW_SHARE_PIXEL_FORMAT "SDL_VIDEO_WINDOW_SHARE_PIXEL_FORMAT")
-(define SDL_HINT_VIDEO_WIN_D3DCOMPILER "SDL_VIDEO_WIN_D3DCOMPILER")
-(define SDL_HINT_VIDEO_X11_XINERAMA "SDL_VIDEO_X11_XINERAMA")
-(define SDL_HINT_VIDEO_X11_XRANDR "SDL_VIDEO_X11_XRANDR")
-(define SDL_HINT_VIDEO_X11_XVIDMODE "SDL_VIDEO_X11_XVIDMODE")
-(define SDL_HINT_XINPUT_ENABLED "SDL_XINPUT_ENABLED")
+;; (define SDL_HINT_ACCELEROMETER_AS_JOYSTICK "SDL_ACCELEROMETER_AS_JOYSTICK")
+;; (define SDL_HINT_FRAMEBUFFER_ACCELERATION "SDL_FRAMEBUFFER_ACCELERATION")
+;; (define SDL_HINT_GAMECONTROLLERCONFIG "SDL_GAMECONTROLLERCONFIG")
+;; (define SDL_HINT_GRAB_KEYBOARD "SDL_GRAB_KEYBOARD")
+;; (define SDL_HINT_IDLE_TIMER_DISABLED "SDL_IDLE_TIMER_DISABLED")
+;; (define SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS "SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS")
+;; (define SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK "SDL_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK")
+;; (define SDL_HINT_MOUSE_RELATIVE_MODE_WARP "SDL_MOUSE_RELATIVE_MODE_WARP")
+;; (define SDL_HINT_ORIENTATIONS "SDL_ORIENTATIONS")
+;; (define SDL_HINT_RENDER_DIRECT3D_THREADSAFE "SDL_RENDER_DIRECT3D_THREADSAFE")
+;; (define SDL_HINT_RENDER_DRIVER "SDL_RENDER_DRIVER")
+;; (define SDL_HINT_RENDER_OPENGL_SHADERS "SDL_RENDER_OPENGL_SHADERS")
+;; (define SDL_HINT_RENDER_SCALE_QUALITY "SDL_RENDER_SCALE_QUALITY")
+;; (define SDL_HINT_RENDER_VSYNC "SDL_RENDER_VSYNC")
+;; (define SDL_HINT_TIMER_RESOLUTION "SDL_TIMER_RESOLUTION")
+;; (define SDL_HINT_VIDEO_ALLOW_SCREENSAVER "SDL_VIDEO_ALLOW_SCREENSAVER")
+;; (define SDL_HINT_VIDEO_HIGHDPI_DISABLED "SDL_VIDEO_HIGHDPI_DISABLED")
+;; (define SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES "SDL_VIDEO_MAC_FULLSCREEN_SPACES")
+;; (define SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS "SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS")
+;; (define SDL_HINT_VIDEO_WINDOW_SHARE_PIXEL_FORMAT "SDL_VIDEO_WINDOW_SHARE_PIXEL_FORMAT")
+;; (define SDL_HINT_VIDEO_WIN_D3DCOMPILER "SDL_VIDEO_WIN_D3DCOMPILER")
+;; (define SDL_HINT_VIDEO_X11_XINERAMA "SDL_VIDEO_X11_XINERAMA")
+;; (define SDL_HINT_VIDEO_X11_XRANDR "SDL_VIDEO_X11_XRANDR")
+;; (define SDL_HINT_VIDEO_X11_XVIDMODE "SDL_VIDEO_X11_XVIDMODE")
+;; (define SDL_HINT_XINPUT_ENABLED "SDL_XINPUT_ENABLED")
 
 (c-define-constants
  SDLK_UNKNOWN
