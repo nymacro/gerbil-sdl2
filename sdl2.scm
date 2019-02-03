@@ -34,6 +34,12 @@
 
 (##include "sdl2-prelude.scm")
 
+(define-macro (c-lambda# stmt args ret . rest)
+  `(lambda wrapper-args
+     (let ((##c-lambda-real (c-lambda ,args ,ret ,@rest)))
+       (displayln ,stmt)
+       (apply ##c-lambda-real wrapper-args))))
+
 (define-macro (c-define-constants . consts)
   (let ((to-c-lambda (lambda (const)
                        (let ((wrapper (string->symbol
@@ -61,9 +67,9 @@
                           `(begin
                              (define ,getter
                                (c-lambda (,name-ptr) ,field-type
-                                 ,(string-append "___result = ___arg1->" field-name ";")))
+                                 ,(string-append "___return(___arg1->" field-name ");")))
                              (define ,setter
-                               (c-lambda (,name-ptr ,field-type) ,field-type
+                               (c-lambda (,name-ptr ,field-type) void ;,field-type
                                  ,(string-append "___arg1->" field-name " = ___arg2;"))))))))
     `(begin
        ;; type functions
@@ -72,12 +78,13 @@
        (define ,constructor
          (c-lambda () ,name-ptr
            ,(string-append "___result = malloc(sizeof(" name-str "));")))
-       ;; (define ,(string->symbol (string-append name-str "*->" name-str))
-       ;;   (c-lambda (,name-ptr) ,name
-       ;;     "___result = *(___arg1);"))
-       ;; (define ,(string->symbol (string-append name-str "->" name-str "*"))
-       ;;   (c-lambda (,name) ,name-ptr
-       ;;     "___result = ___arg1;"))
+
+       (define ,(string->symbol (string-append name-str "*->" name-str))
+         (c-lambda (,name-ptr) ,name
+           "___return(*(___arg1));"))
+       (define ,(string->symbol (string-append name-str "->" name-str "*"))
+         (c-lambda (,name) ,name-ptr
+           "___return(&___arg1);"))
 
        ;; insert field functions
        ,@(map to-c-lambda fields))))

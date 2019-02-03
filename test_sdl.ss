@@ -79,11 +79,15 @@
             (cond
              ((= event-type SDL_KEYDOWN)
               (let* ((keyboard-event (SDL_Event#key event))
-                     (keysym (SDL_KeyboardEvent#keysym keyboard-event))
-                     (key-code (SDL_Keysym#sym keysym)))
+                     (keysym (SDL_KeyboardEvent#keysym
+                              (SDL_KeyboardEvent->SDL_KeyboardEvent* keyboard-event)))
+                     (key-code (SDL_Keysym#sym (SDL_Keysym->SDL_Keysym* keysym))))
                 (cond
                  ((= key-code SDLK_ESCAPE)
-                  (set! running #f)))))
+                  (displayln "Escape key pressed. Exiting")
+                  (set! running #f))
+                 (else
+                  (displayln (format "Unhandled key: ~a" key-code))))))
              ((= event-type SDL_QUIT) (set! running #f)))
             (event-loop))))
 
