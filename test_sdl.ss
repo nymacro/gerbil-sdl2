@@ -2,7 +2,6 @@
 
 (import :std/format)
 (import :std/sugar)
-(import :std/net/repl)
 (import :gerbil/gambit/threads)
 
 (define (make-frame-limiter frame-max initial-time)
@@ -21,7 +20,7 @@
     (lambda (current-time)
       (set! counter (fx1+ counter))
       (when (fx> current-time (fx+ last-time 1000))
-        (set! fps (fx/ (fx+ counter fps) 2))
+        (set! fps (fx/ (fx+ counter fps 1) 2)) ; 1+ for ceil
         (set! counter 0)
         (set! last-time current-time))
       fps)))
@@ -42,7 +41,7 @@
 (SDL_Init SDL_INIT_EVERYTHING)
 (TTF_Init)
 (define ttf-font (TTF_OpenFont "iosevka-bold.ttc" 48))
-(define hello-surface (TTF_RenderText_Blended ttf-font "Hello world!" color-cyan))
+(define hello-surface (TTF_RenderText_Blended ttf-font "Hello!" color-cyan))
 
 (define (make-marquee from to span-time init-time)
   (let* ((last-time init-time)
@@ -89,10 +88,9 @@
        (current-time (SDL_GetTicks))
        (frame-limiter (make-frame-limiter 60 current-time))
        (frame-counter (make-frame-counter current-time))
-       (repl-server #f)
        (event (make-SDL_Event))
-       (marquee-x (make-marquee 0 800 3000 current-time))
-       (marquee-y (make-marquee 0 600 3000 current-time))
+       ;; (marquee-x (make-marquee 0 800 3000 current-time))
+       ;; (marquee-y (make-marquee 0 600 3000 current-time))
        (orbit (make-orbit 200 2000 current-time))
        (waver (make-sine 400 1250 current-time))
        (rect (make-SDL_Rect)))
@@ -120,10 +118,9 @@
             ;; (displayln (format "event: ~a" event))
             (cond
              ((fx= event-type SDL_KEYDOWN)
-              (let* ((keyboard-event (SDL_Event#key event))
-                     (keysym (SDL_KeyboardEvent#keysym
-                              (SDL_KeyboardEvent->SDL_KeyboardEvent* keyboard-event)))
-                     (key-code (SDL_Keysym#sym (SDL_Keysym->SDL_Keysym* keysym))))
+              (let* ((keyboard-event (SDL_Event#key-ref event))
+                     (keysym (SDL_KeyboardEvent#keysym-ref keyboard-event))
+                     (key-code (SDL_Keysym#sym keysym)))
                 (cond
                  ((fx= key-code SDLK_ESCAPE)
                   (displayln "Escape key pressed. Exiting")
@@ -138,23 +135,30 @@
 
       ;; redisplay
       (SDL_FillRect surface #f (SDL_MapRGB (SDL_Surface#format surface) 0 0 0))
-      (let ((x (marquee-x current-time))
-            (y (marquee-y current-time)))
-        (SDL_Rect#x! rect x)
-        (SDL_Rect#y! rect y))
-      (SDL_BlitSurface hello-surface #f surface rect)
 
-      (let ((pair (orbit current-time)))
-        (SDL_Rect#x! rect (fx+ 200 (car pair)))
-        (SDL_Rect#y! rect (fx+ 200 (cdr pair))))
-      (SDL_BlitSurface hello-surface #f surface rect)
+      ;; (let ((x (marquee-x current-time))
+      ;;       (y (marquee-y current-time)))
+      ;;   (SDL_Rect#x! rect x)
+      ;;   (SDL_Rect#y! rect y))
+      ;; (SDL_BlitSurface hello-surface #f surface rect)
 
-      (let ((x (waver current-time)))
-        (SDL_Rect#x! rect (fx+ 200 x))
-        (SDL_Rect#y! rect 0))
+      (let ((pair (orbit current-time))
+            (x-offset (fx- (fx/ (SDL_Surface#w surface) 2)
+                           (fx/ (SDL_Surface#w hello-surface) 2)))
+            (y-offset (fx- (fx/ (SDL_Surface#h surface) 2)
+                           (fx/ (SDL_Surface#h hello-surface) 2))))
+        (SDL_Rect#x! rect (fx+ x-offset
+                               (waver current-time)
+                               (car pair)))
+        (SDL_Rect#y! rect (fx+ y-offset
+                               (cdr pair))))
       (SDL_BlitSurface hello-surface #f surface rect)))
 
-  ;; (stop-repl-server! repl-server)
+      ;; (let ((x (waver current-time)))
+      ;;   (SDL_Rect#x! rect (fx+ 200 x))
+      ;;   (SDL_Rect#y! rect 0))
+      ;; (SDL_BlitSurface hello-surface #f surface rect)))
+
   (SDL_DestroyWindow window))
 (SDL_Quit)
 

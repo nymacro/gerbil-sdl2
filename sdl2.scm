@@ -86,13 +86,20 @@
                              (define ,getter
                                (c-lambda (,name-ptr) ,field-type
                                  ,(string-append "___return(___arg1->" field-name ");")))
+                             (define ,(string->symbol (string-append
+                                                       (symbol->string getter)
+                                                       "-ref"))
+                               (c-lambda (,name-ptr) (pointer ,field-type)
+                                 ,(string-append "___return(&___arg1->" field-name ");")))
                              (define ,setter
                                (c-lambda (,name-ptr ,field-type) void ;,field-type
                                  ,(string-append "___arg1->" field-name " = ___arg2;"))))))))
     `(begin
        (define ,constructor
          (let ((c-fn (c-lambda () ,name-ptr
-                       ,(string-append "___result = malloc(sizeof(" name-str "));"))))
+                       ,(string-append "___result = malloc(sizeof(" name-str "));")))
+               (f-fn (c-lambda (,name-ptr) void
+                       "free(___arg1);")))
            (lambda ()
              (let ((ptr (c-fn)))
                (make-will ptr
@@ -105,8 +112,8 @@
          (c-lambda (,name-ptr) ,name
            "___return(*(___arg1));"))
        (define ,(string->symbol (string-append name-str "->" name-str "*"))
-         (c-lambda (,name) ,name-ptr
-           "___return(&___arg1);"))
+           (c-lambda (,name) ,name-ptr
+             "___return(&___arg1);"))
 
        ;; insert field functions
        ,@(map to-c-lambda fields))))
