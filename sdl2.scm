@@ -34,7 +34,32 @@
 
 (##include "sdl2-prelude.scm")
 
-(define-macro (c-lambda# stmt args ret . rest)
+(define-macro (finalize-with finalizer value)
+  `(begin
+     (make-will ,value (lambda (x)
+                        (displayln (string-append "freeing " (object->string x)
+                                                  " with " (object->string ,finalizer)))
+                        (,finalizer x)))
+     ,value))
+
+(define-macro (c-lambda#checked check args ret . rest)
+  `(lambda wrapper-args
+     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
+            (retval (apply ##c-lambda-real wrapper-args)))
+       (unless (,check retval)
+         (displayln (string-append "Unexpected return value from " ,@rest
+                                   ": " (object->string retval)))
+         (abort retval))
+       retval)))
+
+(define (true? p)
+  (eq? #t p))
+(define (false? p)
+  (eq? #f p))
+(define (!false? p)
+  (not (false? p)))
+
+(define-macro (c-lambda#debug stmt args ret . rest)
   `(lambda wrapper-args
      (let ((##c-lambda-real (c-lambda ,args ,ret ,@rest)))
        (displayln ,stmt)
@@ -101,11 +126,7 @@
                (f-fn (c-lambda (,name-ptr) void
                        "free(___arg1);")))
            (lambda ()
-             (let ((ptr (c-fn)))
-               (make-will ptr
-                          (lambda (obj)
-                            (displayln ,(string-append "free " name-str))))
-               ptr))))
+             (finalize-with f-fn (c-fn)))))
 
        ;; value/pointer conversions
        (define ,(string->symbol (string-append name-str "*->" name-str))
@@ -1722,8 +1743,8 @@
 (define SDL_HasSSE42 (c-lambda () SDL_bool "SDL_HasSSE42"))
 (define SDL_HasScreenKeyboardSupport (c-lambda () SDL_bool "SDL_HasScreenKeyboardSupport"))
 (define SDL_HideWindow (c-lambda (SDL_Window*) void "SDL_HideWindow"))
-(define SDL_Init (c-lambda (unsigned-int32) int "SDL_Init"))
-(define SDL_InitSubSystem (c-lambda (unsigned-int32) int "SDL_InitSubSystem"))
+(define SDL_Init (c-lambda#checked zero? (unsigned-int32) int "SDL_Init"))
+(define SDL_InitSubSystem (c-lambda#checked zero? (unsigned-int32) int "SDL_InitSubSystem"))
 (define SDL_IntersectRect (c-lambda (SDL_Rect* SDL_Rect* SDL_Rect*) SDL_bool "SDL_IntersectRect"))
 (define SDL_IntersectRectAndLine (c-lambda (SDL_Rect* int* int* int* int*) SDL_bool "SDL_IntersectRectAndLine"))
 ;; (cond-expand
@@ -1762,8 +1783,8 @@
   (define SDL_JoystickOpen (c-lambda (int) SDL_Joystick* "SDL_JoystickOpen"))
   (define SDL_JoystickUpdate (c-lambda () void "SDL_JoystickUpdate")))
  (else #!void))
-(define SDL_LoadBMP (c-lambda (nonnull-char-string) SDL_Surface* "SDL_LoadBMP"))
-(define SDL_LoadBMP_RW (c-lambda (SDL_RWops* int) SDL_Surface* "SDL_LoadBMP_RW"))
+(define SDL_LoadBMP (c-lambda#checked !false? (nonnull-char-string) SDL_Surface* "SDL_LoadBMP"))
+(define SDL_LoadBMP_RW (c-lambda#checked !false? (SDL_RWops* int) SDL_Surface* "SDL_LoadBMP_RW"))
 (define SDL_LoadDollarTemplates (c-lambda (SDL_TouchID SDL_RWops*) int "SDL_LoadDollarTemplates"))
 (define SDL_LoadFunction (c-lambda (void* nonnull-char-string) void* "SDL_LoadFunction"))
 (define SDL_LoadObject (c-lambda (nonnull-char-string) void* "SDL_LoadObject"))

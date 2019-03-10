@@ -10,19 +10,32 @@
   (c-lambda () char-string "TTF_GetError"))
 
 (define TTF_Init
-  (c-lambda () int "TTF_Init"))
+  (c-lambda#checked zero? () int "TTF_Init"))
+
+(define TTF_CloseFont
+  (c-lambda (TTF_Font*) void "TTF_CloseFont"))
 
 (define TTF_OpenFont
-  (c-lambda (char-string int) TTF_Font* "TTF_OpenFont"))
+  (finalize-with
+   TTF_CloseFont
+   (c-lambda#checked !false? (char-string int) TTF_Font* "TTF_OpenFont")))
 
 (define TTF_RenderText_Blended
-  (c-lambda (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderText_Blended"))
+  (finalize-with
+   SDL_FreeSurface
+   (c-lambda#checked !false? (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderText_Blended")))
 
 (define TTF_RenderText_Solid
-  (c-lambda (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderText_Solid"))
+  (finalize-with
+   SDL_FreeSurface
+   (c-lambda#checked !false? (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderText_Solid")))
 
 (define TTF_RenderUTF8_Blended
-  (c-lambda (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderUTF8_Blended"))
+  (finalize-with
+   SDL_FreeSurface
+   (c-lambda#checked !false? (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderUTF8_Blended")))
 
 (define TTF_RenderUTF8_Solid
-  (c-lambda (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderUTF8_Solid"))
+  (finalize-with
+   SDL_FreeSurface
+   (c-lambda#checked !false? (TTF_Font* char-string SDL_Color) SDL_Surface* "TTF_RenderUTF8_Solid")))

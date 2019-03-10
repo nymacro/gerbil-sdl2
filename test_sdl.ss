@@ -38,9 +38,10 @@
 (define color-cyan (literal-color 255 0 255))
 (define color-black (literal-color 0 0 0))
 
-(SDL_Init SDL_INIT_EVERYTHING)
+(SDL_Init SDL_INIT_VIDEO)
 (TTF_Init)
-(define ttf-font (TTF_OpenFont "iosevka-bold.ttc" 48))
+
+(define ttf-font (TTF_OpenFont "/usr/local/share/fonts/hack-font/Hack-Bold.ttf" 48))
 (define hello-surface (TTF_RenderText_Blended ttf-font "Hello!" color-cyan))
 
 (define (make-marquee from to span-time init-time)
@@ -93,9 +94,8 @@
        ;; (marquee-y (make-marquee 0 600 3000 current-time))
        (orbit (make-orbit 200 2000 current-time))
        (waver (make-sine 400 1250 current-time))
-       (rect (make-SDL_Rect)))
-
-  (define frame-rate 0)
+       (rect (make-SDL_Rect))
+       (frame-rate 0))
 
   (while running
     (SDL_UpdateWindowSurface window)
