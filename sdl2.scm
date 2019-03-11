@@ -1121,13 +1121,13 @@
 
 (c-define-struct SDL_Event
                 (type unsigned-int32)
-                ;; (window SDL_WindowEvent)
-                (key SDL_KeyboardEvent))
-                ;; (edit SDL_TextEditingEvent)
-                ;; (text SDL_TextInputEvent)
-                ;; (motion SDL_MouseMotionEvent)
-                ;; (button SDL_MouseButtonEvent)
-                ;; (wheel SDL_MouseWheelEvent)
+                (window SDL_WindowEvent)
+                (key SDL_KeyboardEvent)
+                (edit SDL_TextEditingEvent)
+                (text SDL_TextInputEvent)
+                (motion SDL_MouseMotionEvent)
+                (button SDL_MouseButtonEvent)
+                (wheel SDL_MouseWheelEvent)
                 ;; (jaxis SDL_JoyAxisEvent)
                 ;; (jball SDL_JoyBallEvent)
                 ;; (jhat SDL_JoyHatEvent)
@@ -1136,8 +1136,8 @@
                 ;; (caxis SDL_ControllerAxisEvent)
                 ;; (cbutton SDL_ControllerButtonEvent)
                 ;; (cdevice SDL_ControllerDeviceEvent)
-                ;; (quit SDL_QuitEvent)
-                ;; (user SDL_UserEvent)
+                (quit SDL_QuitEvent)
+                (user SDL_UserEvent))
                 ;; (syswm SDL_SysWMEvent)
                 ;; (tfinger SDL_TouchFingerEvent)
                 ;; (mgesture SDL_MultiGestureEvent))
@@ -1393,32 +1393,32 @@
 ;;                  (windowID unsigned-int32)
 ;;                  (text (array char))) ;; a 32 elements fixed-size array
 
-;; (c-define-struct SDL_TouchFingerEvent
-;;                  (type unsigned-int32)
-;;                  (timestamp unsigned-int32)
-;;                  (touchId SDL_TouchID)
-;;                  (fingerId SDL_FingerID)
-;;                  (x float)
-;;                  (y float)
-;;                  (dx float)
-;;                  (dy float)
-;;                  (pressure float))
+(c-define-struct SDL_TouchFingerEvent
+                 (type unsigned-int32)
+                 (timestamp unsigned-int32)
+                 (touchId SDL_TouchID)
+                 (fingerId SDL_FingerID)
+                 (x float)
+                 (y float)
+                 (dx float)
+                 (dy float)
+                 (pressure float))
 
-;; (c-define-struct SDL_UserEvent
-;;                  (type unsigned-int32)
-;;                  (timestamp unsigned-int32)
-;;                  (windowID unsigned-int32)
-;;                  (code int32)
-;;                  (data1 void*)
-;;                  (data2 void*))
+(c-define-struct SDL_UserEvent
+                 (type unsigned-int32)
+                 (timestamp unsigned-int32)
+                 (windowID unsigned-int32)
+                 (code int32)
+                 (data1 void*)
+                 (data2 void*))
 
-;; (c-define-struct SDL_WindowEvent
-;;                  (type unsigned-int32)
-;;                  (timestamp unsigned-int32)
-;;                  (windowID unsigned-int32)
-;;                  (event unsigned-int8)
-;;                  (data1 int32)
-;;                  (data2 int32))
+(c-define-struct SDL_WindowEvent
+                 (type unsigned-int32)
+                 (timestamp unsigned-int32)
+                 (windowID unsigned-int32)
+                 (event unsigned-int8)
+                 (data1 int32)
+                 (data2 int32))
 
 ;; (cond-expand
 ;;  (sdl:assert
@@ -1437,10 +1437,10 @@
 ;; ;; (c-define-struct SDL_atomic_t
 ;; ;;                  (value int))
 
-;; (c-define-struct SDL_version
-;;                  (major unsigned-int8)
-;;                  (minor unsigned-int8)
-;;                  (patch unsigned-int8))
+(c-define-struct SDL_version
+                 (major unsigned-int8)
+                 (minor unsigned-int8)
+                 (patch unsigned-int8))
 
 ;;------------------------------------------------------------------------------
 ;;!! Functions

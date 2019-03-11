@@ -112,11 +112,22 @@
 
       (let event-loop ()
         (let ((e (SDL_PollEvent event))
-              (event-type (SDL_Event#type event)))
+              (event-type (SDL_Event#type event))
+              ;; remove displayln binding for event logging
+              (displayln void))
           (when (fx> e 0)
-            ;; process events
-            ;; (displayln (format "event: ~a" event))
             (cond
+             ((fx= event-type SDL_MOUSEBUTTONDOWN)
+              (let* ((button-event (SDL_Event#button-ref event))
+                     (button (SDL_MouseButtonEvent#button button-event)))
+                (displayln (format "Mouse press: ~a" button))))
+             ((fx= event-type SDL_MOUSEMOTION)
+              (let* ((motion-event (SDL_Event#motion-ref event))
+                     (x (SDL_MouseMotionEvent#x motion-event))
+                     (y (SDL_MouseMotionEvent#y motion-event)))
+                     ;; (rx (SDL_MouseMotionEvent#xrel motion-event))
+                     ;; (ry (SDL_MouseMotionEvent#yrel motion-event)))
+                (displayln (format "x: ~a, y: ~a" x y))))
              ((fx= event-type SDL_KEYDOWN)
               (let* ((keyboard-event (SDL_Event#key-ref event))
                      (keysym (SDL_KeyboardEvent#keysym-ref keyboard-event))
@@ -160,6 +171,7 @@
       ;; (SDL_BlitSurface hello-surface #f surface rect)))
 
   (SDL_DestroyWindow window))
+
 (SDL_Quit)
 
 (displayln "Goodbye :(")
