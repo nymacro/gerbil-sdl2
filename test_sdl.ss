@@ -90,16 +90,12 @@
        (frame-limiter (make-frame-limiter 60 current-time))
        (frame-counter (make-frame-counter current-time))
        (event (make-SDL_Event))
-       ;; (marquee-x (make-marquee 0 800 3000 current-time))
-       ;; (marquee-y (make-marquee 0 600 3000 current-time))
        (orbit (make-orbit 200 2000 current-time))
        (waver (make-sine 400 1250 current-time))
        (rect (make-SDL_Rect))
        (frame-rate 0))
 
   (while running
-    (SDL_UpdateWindowSurface window)
-
     (let* ((current-time (SDL_GetTicks))
            (delay-time (frame-limiter current-time)))
       (SDL_Delay delay-time)
@@ -147,12 +143,6 @@
       ;; redisplay
       (SDL_FillRect surface #f (SDL_MapRGB (SDL_Surface#format surface) 0 0 0))
 
-      ;; (let ((x (marquee-x current-time))
-      ;;       (y (marquee-y current-time)))
-      ;;   (SDL_Rect#x! rect x)
-      ;;   (SDL_Rect#y! rect y))
-      ;; (SDL_BlitSurface hello-surface #f surface rect)
-
       (let ((pair (orbit current-time))
             (x-offset (fx- (fx/ (SDL_Surface#w surface) 2)
                            (fx/ (SDL_Surface#w hello-surface) 2)))
@@ -163,12 +153,10 @@
                                (car pair)))
         (SDL_Rect#y! rect (fx+ y-offset
                                (cdr pair))))
-      (SDL_BlitSurface hello-surface #f surface rect)))
+      (SDL_BlitSurface hello-surface #f surface rect)
 
-      ;; (let ((x (waver current-time)))
-      ;;   (SDL_Rect#x! rect (fx+ 200 x))
-      ;;   (SDL_Rect#y! rect 0))
-      ;; (SDL_BlitSurface hello-surface #f surface rect)))
+      ;; flip surface
+      (SDL_UpdateWindowSurface window)))
 
   (SDL_DestroyWindow window))
 
