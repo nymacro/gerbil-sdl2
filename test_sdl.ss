@@ -1,17 +1,22 @@
+;; simple test application
 (import :sdl2/sdl2)
 
 (import :std/format)
 (import :std/sugar)
 (import :gerbil/gambit/threads)
 
+(define ttf-font-path "/usr/local/share/fonts/hack-font/Hack-Bold.ttf")
+
 (define (make-frame-limiter frame-max initial-time)
   (let ((last-time initial-time)
         (max-delay (fx/ 1000 frame-max)))
     (lambda (current-time)
-      (let ((since (fx- current-time last-time)))
+      (let* ((since (fx- current-time last-time))
+             (delay-time (if (fx<= since 1)
+                           0
+                           (fx/ 1000 since))))
         (set! last-time current-time)
-        (min (fx/ 1000 (max 1 since))
-             max-delay)))))
+        (min delay-time max-delay)))))
 
 (define (make-frame-counter initial-time)
   (let ((last-time initial-time)
@@ -20,7 +25,7 @@
     (lambda (current-time)
       (set! counter (fx1+ counter))
       (when (fx> current-time (fx+ last-time 1000))
-        (set! fps (fx/ (fx+ counter fps 1) 2)) ; 1+ for ceil
+        (set! fps counter)
         (set! counter 0)
         (set! last-time current-time))
       fps)))
@@ -41,7 +46,7 @@
 (SDL_Init SDL_INIT_VIDEO)
 (TTF_Init)
 
-(define ttf-font (TTF_OpenFont "/usr/local/share/fonts/hack-font/Hack-Bold.ttf" 48))
+(define ttf-font (TTF_OpenFont ttf-font-path 48))
 (define hello-surface (TTF_RenderText_Blended ttf-font "Hello!" color-cyan))
 
 (define (make-marquee from to span-time init-time)
@@ -103,8 +108,8 @@
       ;; only display FPS on rate change
       (let ((new-frame-rate (frame-counter current-time)))
         (when (not (fx= frame-rate new-frame-rate))
-          (displayln (format "fps: ~a" (frame-counter current-time))))
-        (set! frame-rate new-frame-rate))
+          (displayln (format "fps: ~a" new-frame-rate))
+          (set! frame-rate new-frame-rate)))
 
       (let event-loop ()
         (let ((e (SDL_PollEvent event))

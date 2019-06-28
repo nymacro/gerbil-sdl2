@@ -4,10 +4,5 @@
 package: sdl2
 
 (export #t)
-;; (extern
-;;   SDL_Init
-;;   SDL_Quit
-;;   SDL_CreateWindow
-;;   SDL_DestroyWindow
-;;   SDL_Delay)
+
 (load-module "sdl2/sdl2")

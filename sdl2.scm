@@ -11,7 +11,6 @@
   (not safe)
   (not run-time-bindings))
 
-;; (namespace ("sdl2/sdl2#"))
 (##namespace ("" define-macro define lambda let let* if or and
               quote quasiquote unquote unquote-splicing
               c-lambda c-define-type c-declare c-initialize

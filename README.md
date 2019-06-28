@@ -1,5 +1,13 @@
 # Gerbil SDL2 Bindings
 
+SDL2 bindings have been derived from [sphere-sdl2](https://github.com/fourthbit/sphere-sdl2).
+
+This fork removes all reliance on the Spheres infrastructure and
+re-implements much of the FFI functionality.
+
+While the intent of these changes is to provide SDL2 functionality within
+Gerbil Scheme, the core bindings remain compatible with Gambit.
+
 ## Installation
 
 ### Prerequisites
@@ -15,6 +23,14 @@
 ./build.ss
 ```
 
+## Example
+
+See `test_sdl.ss` for an example of how to use these bindings.
+
+```
+gxi test_sdl.ss
+```
+
 ## Credits
 
-Derived from spheres-sdl2. Mangled by me.
+Derived from sphere-sdl2. Mangled by me.
