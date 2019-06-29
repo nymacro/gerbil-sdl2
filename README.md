@@ -1,5 +1,7 @@
 # Gerbil SDL2 Bindings
 
+*WARNING: this is experimental*
+
 SDL2 bindings have been derived from [sphere-sdl2](https://github.com/fourthbit/sphere-sdl2).
 
 This fork removes all reliance on the Spheres infrastructure and

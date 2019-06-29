@@ -51,6 +51,25 @@
          (abort retval))
        retval)))
 
+(define-macro (c-lambda#final final args ret . rest)
+  `(lambda wrapper-args
+     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
+            (retval (apply ##c-lambda-real wrapper-args)))
+       (finalize-with ,final retval)
+       retval)))
+
+;; TODO clean up these macros
+(define-macro (c-lambda#checked-final check final args ret . rest)
+  `(lambda wrapper-args
+     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
+            (retval (apply ##c-lambda-real wrapper-args)))
+       (unless (,check retval)
+         (displayln (string-append "Unexpected return value from " ,@rest
+                                   ": " (object->string retval)))
+         (abort retval))
+       (finalize-with ,final retval)
+       retval)))
+
 (define (true? p)
   (eq? #t p))
 (define (false? p)
@@ -1496,8 +1515,9 @@
 (define SDL_CreateCond (c-lambda () SDL_cond* "SDL_CreateCond"))
 (define SDL_CreateCursor (c-lambda (unsigned-int8* unsigned-int8* int int int int) SDL_Cursor* "SDL_CreateCursor"))
 (define SDL_CreateMutex (c-lambda () SDL_mutex* "SDL_CreateMutex"))
-(define SDL_CreateRGBSurface (c-lambda (unsigned-int32 int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurface"))
-(define SDL_CreateRGBSurfaceFrom (c-lambda (void* int int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceFrom"))
+(define SDL_CreateRGBSurface (c-lambda#final SDL_FreeSurface (unsigned-int32 int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurface"))
+(define SDL_CreateRGBSurfaceFrom (c-lambda#final SDL_FreeSurface (void* int int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceFrom"))
+(define SDL_CreateRGBSurfaceWithFormat (c-lambda#final SDL_FreeSurface (unsigned-int32 int int int unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceWithFormat"))
 (define SDL_CreateRenderer (c-lambda (SDL_Window* int unsigned-int32) SDL_Renderer* "SDL_CreateRenderer"))
 (define SDL_CreateSemaphore (c-lambda (unsigned-int32) SDL_sem* "SDL_CreateSemaphore"))
 (define SDL_CreateSoftwareRenderer (c-lambda (SDL_Surface*) SDL_Renderer* "SDL_CreateSoftwareRenderer"))
@@ -1508,9 +1528,9 @@
  (sdl:threads
   (define SDL_CreateThread (c-lambda (SDL_ThreadFunction nonnull-char-string void*) SDL_Thread* "SDL_CreateThread")))
  (else #!void))
-(define SDL_CreateWindow (c-lambda (nonnull-char-string int int int int unsigned-int32) SDL_Window* "SDL_CreateWindow"))
-(define SDL_CreateWindowAndRenderer (c-lambda (int int unsigned-int32 SDL_Window** SDL_Renderer**) int "SDL_CreateWindowAndRenderer"))
-(define SDL_CreateWindowFrom (c-lambda (void*) SDL_Window* "SDL_CreateWindowFrom"))
+(define SDL_CreateWindow (c-lambda#final SDL_DestroyWindow (nonnull-char-string int int int int unsigned-int32) SDL_Window* "SDL_CreateWindow"))
+(define SDL_CreateWindowAndRenderer (c-lambda#final SDL_DestroyWindow (int int unsigned-int32 SDL_Window** SDL_Renderer**) int "SDL_CreateWindowAndRenderer"))
+(define SDL_CreateWindowFrom (c-lambda#final SDL_DestroyWindow (void*) SDL_Window* "SDL_CreateWindowFrom"))
 (define SDL_DelEventWatch (c-lambda (SDL_EventFilter void*) void "SDL_DelEventWatch"))
 (define SDL_DelHintCallback (c-lambda (nonnull-char-string SDL_HintCallback void*) void "SDL_DelHintCallback"))
 (define SDL_Delay (c-lambda (unsigned-int32) void "SDL_Delay"))
