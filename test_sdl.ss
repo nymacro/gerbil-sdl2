@@ -161,10 +161,9 @@
       (SDL_BlitSurface hello-surface #f surface rect)
 
       ;; flip surface
-      (SDL_UpdateWindowSurface window)))
-
-  (SDL_DestroyWindow window))
+      (SDL_UpdateWindowSurface window))))
 
 (SDL_Quit)
+(##gc)
 
 (displayln "Goodbye :(")
