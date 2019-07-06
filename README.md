@@ -27,10 +27,12 @@ Gerbil Scheme, the core bindings remain compatible with Gambit.
 
 ## Example
 
-See `test_sdl.ss` for an example of how to use these bindings.
+See `examples` for examples of how to use these bindings.
+
+Try the following:
 
 ```
-gxi test_sdl.ss
+gxi examples/life.ss
 ```
 
 ## Credits
