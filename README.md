@@ -1,25 +1,35 @@
-# Gerbil SDL2 Bindings
+# Gambit/Gerbil SDL2 Bindings
 
-*WARNING: this is experimental*
+*WARNING: this should be considered experimental. Much of what is presented here
+will likely change.*
 
 SDL2 bindings have been derived from [sphere-sdl2](https://github.com/fourthbit/sphere-sdl2).
 
-This fork removes all reliance on the Spheres infrastructure and
-re-implements much of the FFI functionality.
-
-While the intent of these changes is to provide SDL2 functionality within
-Gerbil Scheme, the core bindings remain compatible with Gambit.
+Changes:
+* Remove reliance on Spheres infrastructure.
+* Tie into Gambit's garbage collection. Windows, surfaces and more are don't need
+  manual freeing. **Ongoing**
+* Additional error checking.
+* Make interface more Scheme-like. **Future Goal**
 
 ## Installation
 
 ### Prerequisites
 
-* Gerbil Scheme
+* Gambit Scheme *OR* Gerbil Scheme
 * SDL2
-* SDL2_image
 * SDL2_ttf
+* ~SDL2_image~ Needs work
 
 ### Build/Install
+
+#### Gambit
+
+```sh
+make
+```
+
+#### Gerbil
 
 ```sh
 ./build.ss
@@ -31,7 +41,18 @@ See `examples` for examples of how to use these bindings.
 
 Try the following:
 
+### Gambit
+
+```sh
+make examples/life
+./examples/life
 ```
+
+![Game of Life animation](/meta/life.gif)
+
+### Gerbil
+
+```sh
 gxi examples/life.ss
 ```
 

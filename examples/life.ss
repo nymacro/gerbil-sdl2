@@ -1,7 +1,8 @@
-;;;; gerbil-sdl2 tetris
+;;;; gerbil-sdl2 life
+;;;; Copyright (C) 2019 Aaron Marks. All Rights Reserved.
 
 (import :std/crypto) ; for random-bytes
-(import :sdl2/sdl2)
+(import :nymacro/sdl2)
 (import :std/format)
 (import :std/sugar)
 (import :std/iter)
@@ -10,91 +11,7 @@
 
 (SDL_Init SDL_INIT_VIDEO)
 
-;;;; helper functions
-(define (make-frame-limiter frame-max initial-time)
-  (let ((last-time initial-time)
-        (max-delay (fx/ 1000 frame-max)))
-    (lambda (current-time)
-      (let* ((since (fx- current-time last-time))
-             (delay-time (if (fx<= since 1)
-                           0
-                           (fx/ 1000 since))))
-        (set! last-time current-time)
-        (min delay-time max-delay)))))
-
-(define (make-frame-counter initial-time)
-  (let ((last-time initial-time)
-        (fps 0)
-        (counter 0))
-    (lambda (current-time)
-      (set! counter (fx1+ counter))
-      (when (fx> current-time (fx+ last-time 1000))
-        (set! fps counter)
-        (set! counter 0)
-        (set! last-time current-time))
-      fps)))
-
-(define-syntax literal-color
-  (syntax-rules ()
-    ((_ r g b)
-     (let ((color (make-SDL_Color)))
-       (SDL_Color#r! color r)
-       (SDL_Color#g! color g)
-       (SDL_Color#b! color b)
-       (SDL_Color*->SDL_Color color)))))
-
-(define color-white (literal-color 255 255 255))
-(define color-cyan (literal-color 255 0 255))
-(define color-black (literal-color 0 0 0))
-
-(define-syntax make-rect
-  (syntax-rules ()
-    ((_ x y w h)
-     (let ((rect (make-SDL_Rect)))
-       (SDL_Rect#x! rect x)
-       (SDL_Rect#y! rect y)
-       (SDL_Rect#w! rect w)
-       (SDL_Rect#h! rect h)
-       rect))))
-
-(define make-temp-rect
-  (let ((rect (make-rect 0 0 0 0)))
-    (lambda (x y w h)
-      (SDL_Rect#x! rect x)
-      (SDL_Rect#y! rect y)
-      (SDL_Rect#w! rect w)
-      (SDL_Rect#h! rect h)
-      rect)))
-
-;;;; helper functions
-(define (make-interval interval init-time action)
-  (let ((last-time init-time))
-    (lambda (current-time)
-      (when (fx> current-time (fx+ last-time interval))
-        (action)
-        (set! last-time (fx+ last-time interval))))))
-
-;;;; setup
-(define window-width 1024)
-(define window-height 768)
-(define block-width 24)
-(define block-height 24)
-
-(define block-surface
-  (let* ((surface (SDL_CreateRGBSurfaceWithFormat 0 block-width block-height 32 SDL_PIXELFORMAT_RGB24))
-         (outer (make-rect 0 0 block-width block-width))
-         (inner (make-rect 2 2 (- block-width 4) (- block-height 4))))
-    (SDL_FillRect surface outer (SDL_MapRGB (SDL_Surface#format surface) 255 255 255))
-    (SDL_FillRect surface inner (SDL_MapRGB (SDL_Surface#format surface) 255 0 0))
-    surface))
-
-(define empty-surface
-  (let* ((surface (SDL_CreateRGBSurfaceWithFormat 0 block-width block-height 32 SDL_PIXELFORMAT_RGB24))
-         (outer (make-rect 0 0 block-width block-width))
-         (inner (make-rect 2 2 (- block-width 4) (- block-height 4))))
-    (SDL_FillRect surface outer (SDL_MapRGB (SDL_Surface#format surface) 0 0 0))
-    (SDL_FillRect surface inner (SDL_MapRGB (SDL_Surface#format surface) 24 24 24))
-    surface))
+(load "life_shared.scm")
 
 (define (upto-generator n)
   (lambda ()
@@ -104,17 +21,24 @@
                      (do (1+ current) end)))))
       (do 0 n))))
 
+;;;; setup
+(define window-width 1024)
+(define window-height 768)
+(define block-width 24)
+(define block-height 24)
+
+(define arena-width (fx/ window-width block-width))
+(define arena-height (fx/ window-height block-height))
+
 (define (draw-block x y surface)
-  (SDL_BlitSurface block-surface #f surface (make-temp-rect x y 0 0)))
+  (SDL_FillRect surface
+                (make-temp-rect x y block-width block-height)
+                (SDL_MapRGB (SDL_Surface#format surface) 255 0 0)))
+  
 (define (draw-empty x y surface)
   (SDL_FillRect surface
                 (make-temp-rect x y block-width block-height)
                 (SDL_MapRGB (SDL_Surface#format surface) 0 0 0)))
-  ;; (SDL_BlitSurface empty-surface #f surface (make-temp-rect x y 0 0))
-  
-
-(define arena-width (fx/ window-width block-width))
-(define arena-height (fx/ window-height block-height))
 
 (define (make-arena)
   (make-vector (fx* arena-width arena-height) #f))
@@ -138,9 +62,7 @@
 (define (arena-randomize! arena)
   (for (y (upto-generator arena-height))
     (for (x (upto-generator arena-width))
-      ;; TODO get a faster non-cryptographic PRNG
-      ;; random-bytes reads from /dev/urandom
-      (let* ((random-value (u8vector-ref (random-bytes 1) 0))
+      (let* ((random-value (random-integer 2))
              (value (= 0 (modulo random-value 2))))
         (arena-set! arena x y value)))))
 
@@ -177,14 +99,7 @@
 
 (define (life-tick-inner arena x y)
   (let* ((alive (arena-ref arena x y))
-         (surrounds (arena-surrounds arena x y))
-         (neighbours (fx- (vector-fold (lambda (idx acc val)
-                                         (if val
-                                           (1+ acc)
-                                           acc))
-                                       0
-                                       surrounds)
-                          (if alive 1 0))))
+         (neighbours (arena-surrounds-alive arena x y)))
     (life-tick-state alive neighbours)))
 
 (define (life-tick arena)
@@ -193,6 +108,18 @@
       (for (x (upto-generator arena-width))
         (arena-set! new-arena x y (life-tick-inner arena x y))))        
     new-arena))
+
+(define (arena-surrounds-alive arena x y)
+  (let ((alive 0))
+    (for (yy (upto-generator 3))
+      (for (xx (upto-generator 3))
+        (let* ((get-x (1- (fx+ x xx)))
+               (get-y (1- (fx+ y yy)))
+               (self (and (= get-x x) (= get-y y)))
+               (alivep (arena-ref arena get-x get-y)))
+          (when (and alivep (not self))
+            (set! alive (1+ alive))))))
+    alive))
 
 ;; return a 3x3 vector of surrounds
 (define (arena-surrounds arena x y)
@@ -223,17 +150,17 @@
        (surface (SDL_GetWindowSurface window))
        (running #t)
        (current-time (SDL_GetTicks))
-       (frame-limiter (make-frame-limiter 10 current-time))
+       (frame-limiter (make-frame-limiter 60 current-time))
        (frame-counter (make-frame-counter current-time))
        (event (make-SDL_Event))
        (rect (make-SDL_Rect))
        (frame-rate 0)
        (pause #f)
-       (life-interval (make-interval 200 current-time
+       (life-interval (make-interval 100 current-time
                                           (lambda ()
                                             (unless pause
                                               (set! arena (life-tick arena))))))
-       (redisplay-interval (make-interval 200 current-time
+       (redisplay-interval (make-interval 100 current-time
                                           (lambda ()
                                             (arena-render arena surface)
                                             (SDL_UpdateWindowSurface window)))))

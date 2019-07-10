@@ -1,161 +1,16 @@
 ;;; -*- Scheme -*-
 ;;; Copyright (c) 2013-2014 by Álvaro Castro Castilla. All Rights Reserved.
+;;; Copyright (c) 2018-2019 Aaron Marks. All Rights Reserved.
 ;;; SDL2 Foreign Function Interface
-
-;; compile: -ld-options "-lSDL2" -cc-options "-I/usr/include/SDL2 -D_REENTRANT"
 
 (declare
   (block)
   (standard-bindings)
   (extended-bindings)
-  (not safe)
-  (not run-time-bindings))
-
-(##namespace ("" define-macro define lambda let let* if or and
-              quote quasiquote unquote unquote-splicing
-              c-lambda c-define-type c-declare c-initialize
-              define-syntax syntax-rules syntax-case
-              bound-identifier=?
-              datum->syntax-object
-              environment?
-              free-identifier=?
-              generate-temporaries
-              identifier?
-              interaction-environment
-              literal-identifier=?
-              sc-expand
-              sc-compile-expand
-              syntax-error
-              syntax-object->datum
-              syntax->list
-              syntax->vector
-              foreign-tags macro-slot))
+  (not run-time-bindings)
+  (not safe))
 
 (##include "sdl2-prelude.scm")
-
-(define-macro (finalize-with finalizer value)
-  `(begin
-     (make-will ,value (lambda (x)
-                        (displayln (string-append "freeing " (object->string x)
-                                                  " with " (object->string ,finalizer)))
-                        (,finalizer x)))
-     ,value))
-
-(define-macro (c-lambda#checked check args ret . rest)
-  `(lambda wrapper-args
-     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
-            (retval (apply ##c-lambda-real wrapper-args)))
-       (unless (,check retval)
-         (displayln (string-append "Unexpected return value from " ,@rest
-                                   ": " (object->string retval)))
-         (abort retval))
-       retval)))
-
-(define-macro (c-lambda#final final args ret . rest)
-  `(lambda wrapper-args
-     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
-            (retval (apply ##c-lambda-real wrapper-args)))
-       (finalize-with ,final retval)
-       retval)))
-
-;; TODO clean up these macros
-(define-macro (c-lambda#checked-final check final args ret . rest)
-  `(lambda wrapper-args
-     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
-            (retval (apply ##c-lambda-real wrapper-args)))
-       (unless (,check retval)
-         (displayln (string-append "Unexpected return value from " ,@rest
-                                   ": " (object->string retval)))
-         (abort retval))
-       (finalize-with ,final retval)
-       retval)))
-
-(define (true? p)
-  (eq? #t p))
-(define (false? p)
-  (eq? #f p))
-(define (!false? p)
-  (not (false? p)))
-
-(define-macro (c-lambda#debug stmt args ret . rest)
-  `(lambda wrapper-args
-     (let ((##c-lambda-real (c-lambda ,args ,ret ,@rest)))
-       (displayln ,stmt)
-       (apply ##c-lambda-real wrapper-args))))
-
-(define-macro (c-define-constants . consts)
-  (let ((to-c-lambda (lambda (const)
-                       `(begin
-                          (define ,const
-                            ((c-lambda () unsigned-int
-                               ,(string-append "___result = "
-                                               (symbol->string const)
-                                               ";"))))))))
-    `(begin ,@(map to-c-lambda consts))))
-
-;; FIXME
-(define-macro (c-define-enum name . consts)
-  (let ((to-sym (string->symbol (string-append (symbol->string name) "#to-enum")))
-        (from-sym (string->symbol (string-append (symbol->string name) "#from-enum")))
-        (table-name (gensym name))
-        (rev-table-name (gensym name)))
-    `(begin
-       (c-define-constants ,@consts)
-
-       ;; create assoc table
-       (let ((,table-name (list->table (map (lambda (name)
-                                              (cons name (call name)))
-                                            ,consts)))
-             (,rev-table-name (list->table (map (lambda (name)
-                                                  (cons name (call name)))
-                                                ,consts))))
-         (define (,to-sym from)
-           (table-ref ,table-name from))
-         (define (,from-sym to)
-           (table-ref ,rev-table-name to))))))
-
-(define-macro (c-define-struct name . fields)
-  (let* ((name-ptr (string->symbol (string-append (symbol->string name) "*")))
-         (name-str (symbol->string name))
-         (constructor (string->symbol (string-append "make-" (symbol->string name))))
-         (to-c-lambda (lambda (field)
-                        (let* ((field-name (symbol->string (car field)))
-                               (field-type (cadr field))
-                               (getter (string->symbol
-                                        (string-append name-str "#" field-name)))
-                               (setter (string->symbol
-                                        (string-append (symbol->string getter) "!"))))
-                          `(begin
-                             (define ,getter
-                               (c-lambda (,name-ptr) ,field-type
-                                 ,(string-append "___return(___arg1->" field-name ");")))
-                             (define ,(string->symbol (string-append
-                                                       (symbol->string getter)
-                                                       "-ref"))
-                               (c-lambda (,name-ptr) (pointer ,field-type)
-                                 ,(string-append "___return(&___arg1->" field-name ");")))
-                             (define ,setter
-                               (c-lambda (,name-ptr ,field-type) void ;,field-type
-                                 ,(string-append "___arg1->" field-name " = ___arg2;"))))))))
-    `(begin
-       (define ,constructor
-         (let ((c-fn (c-lambda () ,name-ptr
-                       ,(string-append "___result = malloc(sizeof(" name-str "));")))
-               (f-fn (c-lambda (,name-ptr) void
-                       "free(___arg1);")))
-           (lambda ()
-             (finalize-with f-fn (c-fn)))))
-
-       ;; value/pointer conversions
-       (define ,(string->symbol (string-append name-str "*->" name-str))
-         (c-lambda (,name-ptr) ,name
-           "___return(*(___arg1));"))
-       (define ,(string->symbol (string-append name-str "->" name-str "*"))
-           (c-lambda (,name) ,name-ptr
-             "___return(&___arg1);"))
-
-       ;; insert field functions
-       ,@(map to-c-lambda fields))))
 
 (c-define-constants
  SDL_INIT_TIMER
@@ -1515,22 +1370,23 @@
 (define SDL_CreateCond (c-lambda () SDL_cond* "SDL_CreateCond"))
 (define SDL_CreateCursor (c-lambda (unsigned-int8* unsigned-int8* int int int int) SDL_Cursor* "SDL_CreateCursor"))
 (define SDL_CreateMutex (c-lambda () SDL_mutex* "SDL_CreateMutex"))
-(define SDL_CreateRGBSurface (c-lambda#final SDL_FreeSurface (unsigned-int32 int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurface"))
-(define SDL_CreateRGBSurfaceFrom (c-lambda#final SDL_FreeSurface (void* int int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceFrom"))
-(define SDL_CreateRGBSurfaceWithFormat (c-lambda#final SDL_FreeSurface (unsigned-int32 int int int unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceWithFormat"))
-(define SDL_CreateRenderer (c-lambda (SDL_Window* int unsigned-int32) SDL_Renderer* "SDL_CreateRenderer"))
+(define SDL_CreateRGBSurface (c-final SDL_FreeSurface (c-lambda (unsigned-int32 int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurface")))
+(define SDL_CreateRGBSurfaceFrom (c-final SDL_FreeSurface (c-lambda (void* int int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceFrom")))
+(define SDL_CreateRGBSurfaceWithFormat (c-final SDL_FreeSurface (c-lambda (unsigned-int32 int int int unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceWithFormat")))
+(define SDL_CreateRenderer
+  (make-sdl2-tied 0 (c-final (make-sdl2-untie SDL_DestroyRenderer) (c-checked !false? (c-lambda (SDL_Window* int unsigned-int32) SDL_Renderer* "SDL_CreateRenderer")))))
 (define SDL_CreateSemaphore (c-lambda (unsigned-int32) SDL_sem* "SDL_CreateSemaphore"))
 (define SDL_CreateSoftwareRenderer (c-lambda (SDL_Surface*) SDL_Renderer* "SDL_CreateSoftwareRenderer"))
 (define SDL_CreateSystemCursor (c-lambda (SDL_SystemCursor) SDL_Cursor* "SDL_CreateSystemCursor"))
-(define SDL_CreateTexture (c-lambda (SDL_Renderer* unsigned-int32 int int int) SDL_Texture* "SDL_CreateTexture"))
-(define SDL_CreateTextureFromSurface (c-lambda (SDL_Renderer* SDL_Surface*) SDL_Texture* "SDL_CreateTextureFromSurface"))
+(define SDL_CreateTexture (c-final SDL_DestroyTexture (c-lambda (SDL_Renderer* unsigned-int32 int int int) SDL_Texture* "SDL_CreateTexture")))
+(define SDL_CreateTextureFromSurface (c-final SDL_DestroyTexture (c-lambda (SDL_Renderer* SDL_Surface*) SDL_Texture* "SDL_CreateTextureFromSurface")))
 (cond-expand
  (sdl:threads
   (define SDL_CreateThread (c-lambda (SDL_ThreadFunction nonnull-char-string void*) SDL_Thread* "SDL_CreateThread")))
  (else #!void))
-(define SDL_CreateWindow (c-lambda#final SDL_DestroyWindow (nonnull-char-string int int int int unsigned-int32) SDL_Window* "SDL_CreateWindow"))
-(define SDL_CreateWindowAndRenderer (c-lambda#final SDL_DestroyWindow (int int unsigned-int32 SDL_Window** SDL_Renderer**) int "SDL_CreateWindowAndRenderer"))
-(define SDL_CreateWindowFrom (c-lambda#final SDL_DestroyWindow (void*) SDL_Window* "SDL_CreateWindowFrom"))
+(define SDL_CreateWindow (c-final SDL_DestroyWindow (c-lambda (nonnull-char-string int int int int unsigned-int32) SDL_Window* "SDL_CreateWindow")))
+(define SDL_CreateWindowAndRenderer (c-final SDL_DestroyWindow (c-lambda (int int unsigned-int32 SDL_Window** SDL_Renderer**) int "SDL_CreateWindowAndRenderer")))
+(define SDL_CreateWindowFrom (c-final SDL_DestroyWindow (c-lambda (void*) SDL_Window* "SDL_CreateWindowFrom")))
 (define SDL_DelEventWatch (c-lambda (SDL_EventFilter void*) void "SDL_DelEventWatch"))
 (define SDL_DelHintCallback (c-lambda (nonnull-char-string SDL_HintCallback void*) void "SDL_DelHintCallback"))
 (define SDL_Delay (c-lambda (unsigned-int32) void "SDL_Delay"))
@@ -1762,8 +1618,8 @@
 (define SDL_HasSSE42 (c-lambda () SDL_bool "SDL_HasSSE42"))
 (define SDL_HasScreenKeyboardSupport (c-lambda () SDL_bool "SDL_HasScreenKeyboardSupport"))
 (define SDL_HideWindow (c-lambda (SDL_Window*) void "SDL_HideWindow"))
-(define SDL_Init (c-lambda#checked zero? (unsigned-int32) int "SDL_Init"))
-(define SDL_InitSubSystem (c-lambda#checked zero? (unsigned-int32) int "SDL_InitSubSystem"))
+(define SDL_Init (c-checked zero? (c-lambda (unsigned-int32) int "SDL_Init")))
+(define SDL_InitSubSystem (c-checked zero? (c-lambda (unsigned-int32) int "SDL_InitSubSystem")))
 (define SDL_IntersectRect (c-lambda (SDL_Rect* SDL_Rect* SDL_Rect*) SDL_bool "SDL_IntersectRect"))
 (define SDL_IntersectRectAndLine (c-lambda (SDL_Rect* int* int* int* int*) SDL_bool "SDL_IntersectRectAndLine"))
 ;; (cond-expand
@@ -1802,8 +1658,8 @@
   (define SDL_JoystickOpen (c-lambda (int) SDL_Joystick* "SDL_JoystickOpen"))
   (define SDL_JoystickUpdate (c-lambda () void "SDL_JoystickUpdate")))
  (else #!void))
-(define SDL_LoadBMP (c-lambda#checked !false? (nonnull-char-string) SDL_Surface* "SDL_LoadBMP"))
-(define SDL_LoadBMP_RW (c-lambda#checked !false? (SDL_RWops* int) SDL_Surface* "SDL_LoadBMP_RW"))
+(define SDL_LoadBMP (c-checked !false? (c-lambda (nonnull-char-string) SDL_Surface* "SDL_LoadBMP")))
+(define SDL_LoadBMP_RW (c-checked !false? (c-lambda (SDL_RWops* int) SDL_Surface* "SDL_LoadBMP_RW")))
 (define SDL_LoadDollarTemplates (c-lambda (SDL_TouchID SDL_RWops*) int "SDL_LoadDollarTemplates"))
 (define SDL_LoadFunction (c-lambda (void* nonnull-char-string) void* "SDL_LoadFunction"))
 (define SDL_LoadObject (c-lambda (nonnull-char-string) void* "SDL_LoadObject"))
@@ -2060,5 +1916,5 @@
 ;;           (*current-sdl-ios-animation-callback* params))
 
 ;; (##include "sdl2-mixer.scm")
-(##include "sdl2-image.scm")
-(##include "sdl2-ttf.scm")
+;; (##include "sdl2-image.scm")
+;; (##include "sdl2-ttf.scm")

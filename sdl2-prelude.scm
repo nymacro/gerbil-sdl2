@@ -1,5 +1,133 @@
 ;;; Copyright (c) 2013-2014 by Álvaro Castro Castilla. All Rights Reserved.
+;;; Copyright (c) 2019 Aaron Marks. All Rights Reserved.
 ;;; SDL2 Foreign Function Interface
+
+(define sdl2-ref-table (make-table weak-keys: #t))
+
+(define (sdl2-tie to from)
+  (println (string-append "tie " (object->string to) " to " (object->string from)))
+  (table-set! sdl2-ref-table to from))
+
+(define (sdl2-untie to)
+  (println (string-append "untie " (object->string to)))
+  (table-set! sdl2-ref-table to (table-ref sdl2-ref-table to)))
+
+(define (make-sdl2-tied tie-to-arg create)
+  (lambda args
+    (let ((c (apply create args)))
+      (sdl2-tie c (list-ref args tie-to-arg))
+      c)))
+
+(define (make-sdl2-untie final)
+  (lambda (p)
+    (sdl2-untie p)
+    (final p)))
+
+(define-macro (finalize-with finalizer value)
+  `(begin
+     (make-will ,value (lambda (x)
+                         (println (string-append "freeing " (object->string x)
+                                                 " with " (object->string ,finalizer)))
+                         (,finalizer x)))
+     ,value))
+
+(define (c-final final l)
+  (lambda args
+    (let ((retval (apply l args)))
+      (finalize-with final retval)
+      retval)))
+
+(define (c-checked check l)
+  (lambda args
+    (let ((retval (apply l args)))
+      (unless (check retval)
+        (println (string-append "Unexpected return value from " l
+                                ": " (object->string retval)))
+        (abort retval))
+      retval)))
+
+(define (true? p)
+  (eq? #t p))
+(define (false? p)
+  (eq? #f p))
+(define (!false? p)
+  (not (false? p)))
+
+(define-macro (c-define-constants . consts)
+  (let ((to-c-lambda (lambda (const)
+                       `(begin
+                          (define ,const
+                            ((c-lambda () unsigned-int
+                               ,(string-append "___result = "
+                                               (symbol->string const)
+                                               ";"))))))))
+    `(begin ,@(map to-c-lambda consts))))
+
+;; FIXME
+(define-macro (c-define-enum name . consts)
+  (let ((to-sym (string->symbol (string-append (symbol->string name) "#to-enum")))
+        (from-sym (string->symbol (string-append (symbol->string name) "#from-enum")))
+        (table-name (gensym name))
+        (rev-table-name (gensym name)))
+    `(begin
+       (c-define-constants ,@consts)
+
+       ;; create assoc table
+       (let ((,table-name (list->table (map (lambda (name)
+                                              (cons name (call name)))
+                                            ,consts)))
+             (,rev-table-name (list->table (map (lambda (name)
+                                                  (cons name (call name)))
+                                                ,consts))))
+         (define (,to-sym from)
+           (table-ref ,table-name from))
+         (define (,from-sym to)
+           (table-ref ,rev-table-name to))))))
+
+(define-macro (c-define-struct name . fields)
+  (let* ((name-ptr (string->symbol (string-append (symbol->string name) "*")))
+         (name-str (symbol->string name))
+         (constructor (string->symbol (string-append "make-" (symbol->string name))))
+         (to-c-lambda (lambda (field)
+                        (let* ((field-name (symbol->string (car field)))
+                               (field-type (cadr field))
+                               (getter (string->symbol
+                                        (string-append name-str "#" field-name)))
+                               (setter (string->symbol
+                                        (string-append (symbol->string getter) "!"))))
+                          `(begin
+                             (define ,getter
+                               (c-lambda (,name-ptr) ,field-type
+                                 ,(string-append "___return(___arg1->" field-name ");")))
+                             (define ,(string->symbol (string-append
+                                                       (symbol->string getter)
+                                                       "-ref"))
+                               (c-lambda (,name-ptr) (pointer ,field-type)
+                                 ,(string-append "___return(&___arg1->" field-name ");")))
+                             (define ,setter
+                               (c-lambda (,name-ptr ,field-type) void ;,field-type
+                                 ,(string-append "___arg1->" field-name " = ___arg2;"))))))))
+    `(begin
+       (define ,constructor
+         (let ((c-fn (c-lambda () ,name-ptr
+                       ,(string-append "___result = malloc(sizeof(" name-str "));")))
+               (f-fn (c-lambda (,name-ptr) void
+                       "free(___arg1);")))
+           (lambda ()
+             (finalize-with f-fn (c-fn)))))
+
+       ;; value/pointer conversions
+       (define ,(string->symbol (string-append name-str "*->" name-str))
+         (c-lambda (,name-ptr) ,name
+           "___return(*(___arg1));"))
+       (define ,(string->symbol (string-append name-str "->" name-str "*"))
+           (c-lambda (,name) ,name-ptr
+             "___return(&___arg1);"))
+
+       ;; insert field functions
+       ,@(map to-c-lambda fields))))
+
+
 
 (c-declare "#include \"SDL.h\"")
 ;; Include this file explicitly for the SDL_SysWMinfo declaration
