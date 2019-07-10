@@ -105,7 +105,11 @@
       (do 0 n))))
 
 (define (draw-block x y surface)
-  (SDL_BlitSurface block-surface #f surface (make-temp-rect x y 0 0)))
+  (SDL_FillRect surface
+                (make-temp-rect x y block-width block-height)
+                (SDL_MapRGB (SDL_Surface#format surface) 255 0 0)))
+  ;; (SDL_BlitSurface block-surface #f surface (make-temp-rect x y 0 0))
+  
 (define (draw-empty x y surface)
   (SDL_FillRect surface
                 (make-temp-rect x y block-width block-height)

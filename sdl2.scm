@@ -8,28 +8,11 @@
   (block)
   (standard-bindings)
   (extended-bindings)
-  (not safe)
-  (not run-time-bindings))
+  ;; (not safe)
+  (run-time-bindings))
+  
 
-(##namespace ("" define-macro define lambda let let* if or and
-              quote quasiquote unquote unquote-splicing
-              c-lambda c-define-type c-declare c-initialize
-              define-syntax syntax-rules syntax-case
-              bound-identifier=?
-              datum->syntax-object
-              environment?
-              free-identifier=?
-              generate-temporaries
-              identifier?
-              interaction-environment
-              literal-identifier=?
-              sc-expand
-              sc-compile-expand
-              syntax-error
-              syntax-object->datum
-              syntax->list
-              syntax->vector
-              foreign-tags macro-slot))
+(##namespace (""))
 
 (##include "sdl2-prelude.scm")
 
@@ -2060,5 +2043,5 @@
 ;;           (*current-sdl-ios-animation-callback* params))
 
 ;; (##include "sdl2-mixer.scm")
-(##include "sdl2-image.scm")
-(##include "sdl2-ttf.scm")
+;; (##include "sdl2-image.scm")
+;; (##include "sdl2-ttf.scm")
