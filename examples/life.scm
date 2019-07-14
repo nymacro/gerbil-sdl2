@@ -5,7 +5,11 @@
   (block)
   (standard-bindings)
   (extended-bindings)
-  (run-time-bindings))
+  (not run-time-bindings))
+
+(##include "~~lib/_syntax.scm")
+
+(load "sdl2")
 
 (SDL_Init SDL_INIT_VIDEO)
 
@@ -16,6 +20,11 @@
       (when (fx> current-time (fx+ last-time interval))
         (action)
         (set! last-time (fx+ last-time interval))))))
+
+(define (1+ x) (+ x 1))
+(define (fx1+ x) (1+ x))
+(define (1- x) (- x 1))
+(define (fx1- x) (1- x))
 
 (define displayln
   (case-lambda
@@ -35,7 +44,19 @@
            (set! var (1+ var))
            (loop)))))))
 
+(define fx/ fxquotient)
+
 ;; TODO fix precision of limiting
+;; (define (make-frame-limiter frame-max initial-time)
+;;   (let ((last-time initial-time)
+;;         (max-delay (fx/ 1000 frame-max)))
+;;     (lambda (current-time)
+;;       (let* ((since (fx- current-time last-time))
+;;              (delay-time (if (fx<= since 1)
+;;                            0
+;;                            (fx/ 1000 since))))
+;;         (set! last-time current-time)
+;;         (min delay-time max-delay)))))
 (define (make-frame-limiter frame-max initial-time)
   (let ((last-time initial-time)
         (max-delay (fx/ 1000 frame-max)))
@@ -140,7 +161,7 @@
 
 (define (arena-randomize! arena)
   (for-arena (x y) 
-    (let* ((random-value (random 2))
+    (let* ((random-value (random-integer 2))
            (value (= 0 (modulo random-value 2))))
       (arena-set! arena x y value))))
 
@@ -162,8 +183,6 @@
         (display ".")))
     (newline)))
 
-(define arena (make-arena))
-
 ;;;; Conway's Game of Life
 ;;;;
 ;;;; Events happen simultaneously
@@ -181,11 +200,11 @@
 (define (vector-fold fn init vec)
   (define (vector-iterate vec fn)
     (let ([len (vector-length vec)])
-      (define (do idx)
+      (define (xdo idx)
         (when (< idx len)
           (fn idx (vector-ref vec idx))
-          (do (1+ idx))))
-      (do 0)))
+          (xdo (1+ idx))))
+      (xdo 0)))
   (let ([result init])
     (vector-iterate vec
                     (lambda (idx v)
@@ -194,14 +213,7 @@
 
 (define (life-tick-inner arena x y)
   (let* ((alive (arena-ref arena x y))
-         (surrounds (arena-surrounds arena x y))
-         (neighbours (fx- (vector-fold (lambda (idx acc val)
-                                         (if val
-                                           (1+ acc)
-                                           acc))
-                                       0
-                                       surrounds)
-                          (if alive 1 0))))
+         (neighbours (arena-surrounds-alive arena x y)))
     (life-tick-state alive neighbours)))
 
 (define (life-tick arena)
@@ -209,6 +221,18 @@
     (for-arena (x y)
       (arena-set! new-arena x y (life-tick-inner arena x y)))        
     new-arena))
+
+(define (arena-surrounds-alive arena x y)
+  (let ((alive 0))
+    (for (yy 0 3)
+      (for (xx 0 3)
+        (let* ((get-x (1- (fx+ x xx)))
+               (get-y (1- (fx+ y yy)))
+               (self (and (= get-x x) (= get-y y)))
+               (alivep (arena-ref arena get-x get-y)))
+          (when (and alivep (not self))
+            (set! alive (1+ alive))))))
+    alive))
 
 ;; return a 3x3 vector of surrounds
 (define (arena-surrounds arena x y)
@@ -232,84 +256,83 @@
           (display ".")))
       (newline))))
 
+(define arena (make-arena))
 (arena-randomize! arena)
 
-(define (main)
-  (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
-         (surface (SDL_GetWindowSurface window))
-         (running #t)
-         (current-time (SDL_GetTicks))
-         (frame-limiter (make-frame-limiter 60 current-time))
-         (frame-counter (make-frame-counter current-time))
-         (event (make-SDL_Event))
-         (rect (make-SDL_Rect))
-         (frame-rate 0)
-         (pause #f)
-         (life-interval (make-interval 200 current-time
-                                            (lambda ()
-                                              (unless pause
-                                                (set! arena (life-tick arena))))))
-         (redisplay-interval (make-interval 200 current-time
-                                            (lambda ()
-                                              (arena-render arena surface)
-                                              (SDL_UpdateWindowSurface window)))))
-  
-    ;;;; main loop
-    (while running
-      (let* ((current-time (SDL_GetTicks))
-             (delay-time (frame-limiter current-time)))
-        (SDL_Delay delay-time)
-  
-        ;; only display FPS on rate change
-        (let ((new-frame-rate (frame-counter current-time)))
-          (when (not (fx= frame-rate new-frame-rate))
-            (displayln (format "fps: ~a" new-frame-rate))
-            (set! frame-rate new-frame-rate)))
-  
-        ;; run simulation and redraw
-        (life-interval current-time)
-        (redisplay-interval current-time)
-  
-        (let event-loop ()
-          (let* ((e (SDL_PollEvent event))
-                 (event-type (SDL_Event#type event)))
-            (when (fx> e 0)
-              (cond
-               ((fx= event-type SDL_MOUSEBUTTONDOWN)
-                (let* ((button-event (SDL_Event#button-ref event))
-                       (button (SDL_MouseButtonEvent#button button-event))
-                       (x (SDL_MouseButtonEvent#x button-event))
-                       (y (SDL_MouseButtonEvent#y button-event))
-                       (block-x (fx/ x block-width))
-                       (block-y (fx/ y block-height)))
-                  (arena-set! arena block-x block-y
-                              (not (arena-ref arena block-x block-y)))))
-               ((fx= event-type SDL_KEYDOWN)
-                (let* ((keyboard-event (SDL_Event#key-ref event))
-                       (keysym (SDL_KeyboardEvent#keysym-ref keyboard-event))
-                       (key-code (SDL_Keysym#sym keysym)))
-                  (cond
-                   ((fx= key-code SDLK_RETURN)
-                    (arena-randomize! arena))
-                   ((fx= key-code SDLK_SPACE)
-                    (set! pause (not pause))
-                    (if pause
-                      (displayln "Paused. Press space to unpause.")
-                      (displayln "Unpaused. Press space to pause.")))
-                   ((fx= key-code SDLK_ESCAPE)
-                    (displayln "Escape key pressed. Exiting")
-                    (set! running #f))
-                   (else
-                    (displayln (format "Unhandled key: ~a"
-                                       (if (< key-code 256)
-                                         (integer->char key-code)
-                                         key-code)))))))
-               ((fx= event-type SDL_QUIT) (set! running #f)))
-              (event-loop)))))))
-  
-        
-  
-  (SDL_Quit)
-  (##gc)
+(let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
+       (surface (SDL_GetWindowSurface window))
+       (event (make-SDL_Event))
+       (running #t)
+       (current-time (SDL_GetTicks))
+       (frame-limiter (make-frame-limiter 60 current-time))
+       (frame-counter (make-frame-counter current-time))
+       (frame-rate 0)
+       (pause #f)
+       (life-interval (make-interval 100 current-time
+                                          (lambda ()
+                                            (unless pause
+                                              (set! arena (life-tick arena))))))
+       (redisplay-interval (make-interval 100 current-time
+                                          (lambda ()
+                                            (arena-render arena surface)
+                                            (SDL_UpdateWindowSurface window)))))
 
-  (displayln "Goodbye :("))
+  ;;;; main loop
+  (let loop ()
+    (let* ((current-time (SDL_GetTicks))
+           (delay-time (frame-limiter current-time)))
+      (SDL_Delay delay-time)
+
+      ;; only display FPS on rate change
+      (let ((new-frame-rate (frame-counter current-time)))
+        (when (not (fx= frame-rate new-frame-rate))
+          (displayln (string-append "fps: " (object->string new-frame-rate)))
+          (set! frame-rate new-frame-rate)))
+
+      ;; run simulation and redraw
+      (life-interval current-time)
+      (redisplay-interval current-time)
+
+      (let event-loop ()
+        (let* ((e (SDL_PollEvent event))
+               (event-type (SDL_Event#type event)))
+          (when (fx> e 0)
+            (cond
+             ((fx= event-type SDL_MOUSEBUTTONDOWN)
+              (let* ((button-event (SDL_Event#button-ref event))
+                     (button (SDL_MouseButtonEvent#button button-event))
+                     (x (SDL_MouseButtonEvent#x button-event))
+                     (y (SDL_MouseButtonEvent#y button-event))
+                     (block-x (fx/ x block-width))
+                     (block-y (fx/ y block-height)))
+                (arena-set! arena block-x block-y
+                            (not (arena-ref arena block-x block-y)))))
+             ((fx= event-type SDL_KEYDOWN)
+              (let* ((keyboard-event (SDL_Event#key-ref event))
+                     (keysym (SDL_KeyboardEvent#keysym-ref keyboard-event))
+                     (key-code (SDL_Keysym#sym keysym)))
+                (cond
+                 ((fx= key-code SDLK_RETURN)
+                  (arena-randomize! arena))
+                 ((fx= key-code SDLK_SPACE)
+                  (set! pause (not pause))
+                  (if pause
+                    (displayln "Paused. Press space to unpause.")
+                    (displayln "Unpaused. Press space to pause.")))
+                 ((fx= key-code SDLK_ESCAPE)
+                  (displayln "Escape key pressed. Exiting")
+                  (set! running #f))
+                 (else
+                  (displayln (string-append "Unhandled key:"
+                                            (object->string (if (< key-code 256)
+                                                              (integer->char key-code)
+                                                              key-code))))))))
+             ((fx= event-type SDL_QUIT) (set! running #f)))
+            (event-loop)))))
+
+    (when running (loop))))
+
+(SDL_Quit)
+(##gc)
+
+(displayln "Goodbye :(")

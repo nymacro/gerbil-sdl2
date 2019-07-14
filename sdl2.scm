@@ -19,8 +19,8 @@
 (define-macro (finalize-with finalizer value)
   `(begin
      (make-will ,value (lambda (x)
-                        (displayln (string-append "freeing " (object->string x)
-                                                  " with " (object->string ,finalizer)))
+                        (println (string-append "freeing " (object->string x)
+                                                " with " (object->string ,finalizer)))
                         (,finalizer x)))
      ,value))
 
@@ -29,8 +29,8 @@
      (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
             (retval (apply ##c-lambda-real wrapper-args)))
        (unless (,check retval)
-         (displayln (string-append "Unexpected return value from " ,@rest
-                                   ": " (object->string retval)))
+         (println (string-append "Unexpected return value from " ,@rest
+                                 ": " (object->string retval)))
          (abort retval))
        retval)))
 
@@ -47,7 +47,7 @@
      (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
             (retval (apply ##c-lambda-real wrapper-args)))
        (unless (,check retval)
-         (displayln (string-append "Unexpected return value from " ,@rest
+         (println (string-append "Unexpected return value from " ,@rest
                                    ": " (object->string retval)))
          (abort retval))
        (finalize-with ,final retval)
@@ -63,7 +63,7 @@
 (define-macro (c-lambda#debug stmt args ret . rest)
   `(lambda wrapper-args
      (let ((##c-lambda-real (c-lambda ,args ,ret ,@rest)))
-       (displayln ,stmt)
+       (println ,stmt)
        (apply ##c-lambda-real wrapper-args))))
 
 (define-macro (c-define-constants . consts)
