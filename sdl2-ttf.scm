@@ -1,5 +1,16 @@
+;;; -*- Scheme -*-
 ;;; Copyright (c) 2013 by Álvaro Castro Castilla. All Rights Reserved.
-;;; SDL_Image2 Foreign Function Interface
+;;; Copyright (c) 2018-2019 Aaron Marks. All Rights Reserved.
+;;; SDL2_ttf Foreign Function Interface
+
+(declare
+  (block)
+  (standard-bindings)
+  (extended-bindings)
+  (not safe)
+  (run-time-bindings))
+
+(##include "sdl2-prelude.scm")
 
 (c-declare "#include \"SDL_ttf.h\"")
 

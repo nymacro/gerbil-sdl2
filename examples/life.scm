@@ -10,8 +10,10 @@
 (##include "~~lib/_syntax.scm")
 
 (load "sdl2")
+(load "sdl2-ttf")
 
 (SDL_Init SDL_INIT_VIDEO)
+(TTF_Init)
 
 ;;;; helper functions
 (define (make-interval interval init-time action)
@@ -79,7 +81,6 @@
         (set! counter 0)
         (set! next-time (fx+ next-time 1000)))
       fps)))
-
 
 (define-syntax literal-color
   (syntax-rules ()
@@ -259,6 +260,11 @@
 (define arena (make-arena))
 (arena-randomize! arena)
 
+(define ttf-font-path "/usr/local/share/fonts/hack-font/Hack-Bold.ttf")
+(define ttf-font (TTF_OpenFont ttf-font-path 48))
+(define hello-surface (TTF_RenderText_Blended ttf-font "Hello!" color-cyan))
+
+
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
        (surface (SDL_GetWindowSurface window))
        (event (make-SDL_Event))
@@ -275,6 +281,7 @@
        (redisplay-interval (make-interval 100 current-time
                                           (lambda ()
                                             (arena-render arena surface)
+                                            (SDL_BlitSurface hello-surface #f surface (make-temp-rect 0 0 0 0))
                                             (SDL_UpdateWindowSurface window)))))
 
   ;;;; main loop
