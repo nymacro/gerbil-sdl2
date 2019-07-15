@@ -10,6 +10,8 @@ TTF_LDFLAGS=$(LDFLAGS) -lSDL2_ttf
 GSC=gsc # -debug -debug-location -debug-source
 GSI=gsi
 
+all: sdl2.o1 sdl2-ttf.o1
+
 sdl2.o1: sdl2.scm
 	$(GSC) -link -flat -o sdl2.o1.c sdl2
 	$(GSC) -cc-options "$(CCFLAGS) -D___DYNAMIC" -ld-options "$(SDL_LDFLAGS)" -obj sdl2.o1.c sdl2.c

@@ -1,4 +1,5 @@
-;;;; gambit-sdl2 tetris
+;;;; gambit-sdl2 life
+;;;; Copyright (C) 2019 Aaron Marks. All Rights Reserved.
 
 (declare
   (r5rs-scheme)
@@ -12,21 +13,16 @@
 (load "sdl2")
 (load "sdl2-ttf")
 
+(##include "life_shared.scm")
+
 (SDL_Init SDL_INIT_VIDEO)
-(TTF_Init)
 
 ;;;; helper functions
-(define (make-interval interval init-time action)
-  (let ((last-time init-time))
-    (lambda (current-time)
-      (when (fx> current-time (fx+ last-time interval))
-        (action)
-        (set! last-time (fx+ last-time interval))))))
-
 (define (1+ x) (+ x 1))
 (define (fx1+ x) (1+ x))
 (define (1- x) (- x 1))
 (define (fx1- x) (1- x))
+(define fx/ fxquotient)
 
 (define displayln
   (case-lambda
@@ -35,90 +31,28 @@
     ((str)
      (display str)(newline))))
 
-(define-syntax for
-  (syntax-rules ()
-    ((_ (var init end) stmt ...)
-     (let ((var init))
-       (let loop ()
-         (when (< var end)
-           (begin
-             stmt ...)
-           (set! var (1+ var))
-           (loop)))))))
-
-(define fx/ fxquotient)
-
-;; TODO fix precision of limiting
-;; (define (make-frame-limiter frame-max initial-time)
-;;   (let ((last-time initial-time)
-;;         (max-delay (fx/ 1000 frame-max)))
-;;     (lambda (current-time)
-;;       (let* ((since (fx- current-time last-time))
-;;              (delay-time (if (fx<= since 1)
-;;                            0
-;;                            (fx/ 1000 since))))
-;;         (set! last-time current-time)
-;;         (min delay-time max-delay)))))
-(define (make-frame-limiter frame-max initial-time)
-  (let ((last-time initial-time)
-        (max-delay (fx/ 1000 frame-max)))
-    (lambda (current-time)
-      (let* ((since (fx- current-time last-time))
-             (delay-time (if (fx<= since 1)
-                           0
-                           (fx/ 1000 since))))
-        (set! last-time current-time)
-        (min delay-time max-delay)))))
-
-(define (make-frame-counter initial-time)
-  (let ((next-time (fx+ initial-time 1000))
-        (fps 0)
-        (counter 0))
-    (lambda (current-time)
-      (set! counter (fx1+ counter))
-      (when (fx>= current-time next-time)
-        (set! fps counter)
-        (set! counter 0)
-        (set! next-time (fx+ next-time 1000)))
-      fps)))
-
-(define-syntax literal-color
-  (syntax-rules ()
-    ((_ r g b)
-     (let ((color (make-SDL_Color)))
-       (SDL_Color#r! color r)
-       (SDL_Color#g! color g)
-       (SDL_Color#b! color b)
-       (SDL_Color*->SDL_Color color)))))
-
-(define color-white (literal-color 255 255 255))
-(define color-cyan (literal-color 255 0 255))
-(define color-black (literal-color 0 0 0))
-
-(define-syntax make-rect
-  (syntax-rules ()
-    ((_ x y w h)
-     (let ((rect (make-SDL_Rect)))
-       (SDL_Rect#x! rect x)
-       (SDL_Rect#y! rect y)
-       (SDL_Rect#w! rect w)
-       (SDL_Rect#h! rect h)
-       rect))))
-
-(define make-temp-rect
-  (let ((rect (make-rect 0 0 0 0)))
-    (lambda (x y w h)
-      (SDL_Rect#x! rect x)
-      (SDL_Rect#y! rect y)
-      (SDL_Rect#w! rect w)
-      (SDL_Rect#h! rect h)
-      rect)))
+(define (vector-fold fn init vec)
+  (define (vector-iterate vec fn)
+    (let ((len (vector-length vec)))
+      (define (xdo idx)
+        (when (< idx len)
+          (fn idx (vector-ref vec idx))
+          (xdo (1+ idx))))
+      (xdo 0)))
+  (let ([result init])
+    (vector-iterate vec
+                    (lambda (idx v)
+                      (set! result (fn idx result v))))
+    result))
 
 ;;;; setup
 (define window-width 1024)
 (define window-height 768)
 (define block-width 24)
 (define block-height 24)
+
+(define arena-width (fx/ window-width block-width))
+(define arena-height (fx/ window-height block-height))
 
 (define (draw-block x y surface)
   (SDL_FillRect surface
@@ -129,9 +63,6 @@
   (SDL_FillRect surface
                 (make-temp-rect x y block-width block-height)
                 (SDL_MapRGB (SDL_Surface#format surface) 0 0 0)))
-
-(define arena-width (fx/ window-width block-width))
-(define arena-height (fx/ window-height block-height))
 
 (define (make-arena)
   (make-vector (fx* arena-width arena-height) #f))
@@ -198,20 +129,6 @@
    ((and (not alive) (= neighbours 3)) #t)
    (else alive)))
 
-(define (vector-fold fn init vec)
-  (define (vector-iterate vec fn)
-    (let ([len (vector-length vec)])
-      (define (xdo idx)
-        (when (< idx len)
-          (fn idx (vector-ref vec idx))
-          (xdo (1+ idx))))
-      (xdo 0)))
-  (let ([result init])
-    (vector-iterate vec
-                    (lambda (idx v)
-                      (set! result (fn idx result v))))
-    result))
-
 (define (life-tick-inner arena x y)
   (let* ((alive (arena-ref arena x y))
          (neighbours (arena-surrounds-alive arena x y)))
@@ -260,11 +177,6 @@
 (define arena (make-arena))
 (arena-randomize! arena)
 
-(define ttf-font-path "/usr/local/share/fonts/hack-font/Hack-Bold.ttf")
-(define ttf-font (TTF_OpenFont ttf-font-path 48))
-(define hello-surface (TTF_RenderText_Blended ttf-font "Hello!" color-cyan))
-
-
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
        (surface (SDL_GetWindowSurface window))
        (event (make-SDL_Event))
@@ -281,7 +193,6 @@
        (redisplay-interval (make-interval 100 current-time
                                           (lambda ()
                                             (arena-render arena surface)
-                                            (SDL_BlitSurface hello-surface #f surface (make-temp-rect 0 0 0 0))
                                             (SDL_UpdateWindowSurface window)))))
 
   ;;;; main loop
