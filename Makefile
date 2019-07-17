@@ -12,17 +12,17 @@ GSI=gsi
 
 all: sdl2.o1 sdl2-ttf.o1
 
-sdl2.o1: sdl2.scm
+sdl2.o1: sdl2.scm sdl2-prelude.scm
 	$(GSC) -link -flat -o sdl2.o1.c sdl2
 	$(GSC) -cc-options "$(CCFLAGS) -D___DYNAMIC" -ld-options "$(SDL_LDFLAGS)" -obj sdl2.o1.c sdl2.c
 	$(CC) -shared sdl2.o sdl2.o1.o -o sdl2.o1 $(SDL_LDFLAGS)
 
-sdl2-ttf.o1: sdl2-ttf.scm
+sdl2-ttf.o1: sdl2-ttf.scm sdl2-prelude.scm
 	$(GSC) -link -flat -o sdl2-ttf.o1.c sdl2-ttf
 	$(GSC) -cc-options "$(CCFLAGS) -D___DYNAMIC" -ld-options "$(TTF_LDFLAGS)" -obj sdl2-ttf.o1.c sdl2-ttf.c
 	$(CC) -shared sdl2-ttf.o sdl2-ttf.o1.o -o sdl2-ttf.o1 $(TTF_LDFLAGS)
 
-examples/life: examples/life.scm sdl2.o1 sdl2-ttf.o1
+examples/life: examples/life.scm sdl2.o1 # sdl2-ttf.o1
 	$(GSC) -exe -cc-options "$(CCFLAGS)" -ld-options "$(LDFLAGS)" -e '(##include "~~lib/_syntax.scm")' examples/life.scm
 
 clean:

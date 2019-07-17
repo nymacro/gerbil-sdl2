@@ -10,8 +10,6 @@
   (not safe)
   (run-time-bindings))
 
-(##namespace (""))
-
 (##include "sdl2-prelude.scm")
 
 (c-define-constants
@@ -1375,7 +1373,8 @@
 (define SDL_CreateRGBSurface (c-lambda#final SDL_FreeSurface (unsigned-int32 int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurface"))
 (define SDL_CreateRGBSurfaceFrom (c-lambda#final SDL_FreeSurface (void* int int int int unsigned-int32 unsigned-int32 unsigned-int32 unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceFrom"))
 (define SDL_CreateRGBSurfaceWithFormat (c-lambda#final SDL_FreeSurface (unsigned-int32 int int int unsigned-int32) SDL_Surface* "SDL_CreateRGBSurfaceWithFormat"))
-(define SDL_CreateRenderer (c-lambda (SDL_Window* int unsigned-int32) SDL_Renderer* "SDL_CreateRenderer"))
+(define SDL_CreateRenderer
+  (make-sdl2-tied 0 (c-lambda#checked-final !false? (make-sdl2-untie SDL_DestroyRenderer) (SDL_Window* int unsigned-int32) SDL_Renderer* "SDL_CreateRenderer")))
 (define SDL_CreateSemaphore (c-lambda (unsigned-int32) SDL_sem* "SDL_CreateSemaphore"))
 (define SDL_CreateSoftwareRenderer (c-lambda (SDL_Surface*) SDL_Renderer* "SDL_CreateSoftwareRenderer"))
 (define SDL_CreateSystemCursor (c-lambda (SDL_SystemCursor) SDL_Cursor* "SDL_CreateSystemCursor"))

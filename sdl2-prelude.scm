@@ -1,5 +1,27 @@
 ;;; Copyright (c) 2013-2014 by Álvaro Castro Castilla. All Rights Reserved.
+;;; Copyright (c) 2019 Aaron Marks. All Rights Reserved.
 ;;; SDL2 Foreign Function Interface
+
+(define sdl2-ref-table (make-table weak-keys: #t))
+
+(define (sdl2-tie to from)
+  (println (string-append "tie " (object->string to) " to " (object->string from)))
+  (table-set! sdl2-ref-table to from))
+
+(define (sdl2-untie to)
+  (println (string-append "untie " (object->string to)))
+  (table-set! sdl2-ref-table to (table-ref sdl2-ref-table to)))
+
+(define (make-sdl2-tied tie-to-arg create)
+  (lambda args
+    (let ((c (apply create args)))
+      (sdl2-tie c (list-ref args tie-to-arg))
+      c)))
+
+(define (make-sdl2-untie final)
+  (lambda (p)
+    (sdl2-untie p)
+    (final p)))
 
 (define-macro (finalize-with finalizer value)
   `(begin

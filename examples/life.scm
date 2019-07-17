@@ -11,7 +11,6 @@
 (##include "~~lib/_syntax.scm")
 
 (load "sdl2")
-(load "sdl2-ttf")
 
 (##include "life_shared.scm")
 
@@ -54,15 +53,13 @@
 (define arena-width (fx/ window-width block-width))
 (define arena-height (fx/ window-height block-height))
 
-(define (draw-block x y surface)
-  (SDL_FillRect surface
-                (make-temp-rect x y block-width block-height)
-                (SDL_MapRGB (SDL_Surface#format surface) 255 0 0)))
+(define (draw-block x y renderer)
+  (SDL_SetRenderDrawColor renderer 255 0 0 255)
+  (SDL_RenderFillRect renderer (make-temp-rect x y block-width block-height)))
   
-(define (draw-empty x y surface)
-  (SDL_FillRect surface
-                (make-temp-rect x y block-width block-height)
-                (SDL_MapRGB (SDL_Surface#format surface) 0 0 0)))
+(define (draw-empty x y renderer)
+  (SDL_SetRenderDrawColor renderer 0 0 0 255)
+  (SDL_RenderFillRect renderer (make-temp-rect x y block-width block-height)))
 
 (define (make-arena)
   (make-vector (fx* arena-width arena-height) #f))
@@ -101,11 +98,11 @@
   (for-arena (x y)
     (arena-set! arena x y #f)))
 
-(define (arena-render arena surface)
+(define (arena-render arena renderer)
   (for-arena (x y)
     (if (arena-ref arena x y)
-      (draw-block (fx* block-width x) (fx* block-height y) surface)
-      (draw-empty (fx* block-width x) (fx* block-height y) surface))))
+      (draw-block (fx* block-width x) (fx* block-height y) renderer)
+      (draw-empty (fx* block-width x) (fx* block-height y) renderer))))
 
 (define (arena-display arena)
   (for (y 0 arena-height)
@@ -178,7 +175,7 @@
 (arena-randomize! arena)
 
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
-       (surface (SDL_GetWindowSurface window))
+       (renderer (SDL_CreateRenderer window -1 SDL_RENDERER_SOFTWARE))
        (event (make-SDL_Event))
        (running #t)
        (current-time (SDL_GetTicks))
@@ -192,8 +189,10 @@
                                               (set! arena (life-tick arena))))))
        (redisplay-interval (make-interval 100 current-time
                                           (lambda ()
-                                            (arena-render arena surface)
-                                            (SDL_UpdateWindowSurface window)))))
+                                            (arena-render arena renderer)
+                                            ;; prevent GC of window
+                                            ;; (SDL_GetWindowID window)
+                                            (SDL_RenderPresent renderer)))))
 
   ;;;; main loop
   (let loop ()
@@ -250,7 +249,7 @@
 
     (when running (loop))))
 
-(SDL_Quit)
 (##gc)
+(SDL_Quit)
 
 (displayln "Goodbye :(")
