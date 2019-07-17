@@ -6,7 +6,8 @@
   (block)
   (standard-bindings)
   (extended-bindings)
-  (not run-time-bindings))
+  (not run-time-bindings)
+  (not safe))
 
 (##include "~~lib/_syntax.scm")
 

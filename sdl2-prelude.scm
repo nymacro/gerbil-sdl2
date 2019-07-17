@@ -31,34 +31,20 @@
                          (,finalizer x)))
      ,value))
 
-(define-macro (c-lambda#checked check args ret . rest)
-  `(lambda wrapper-args
-     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
-            (retval (apply ##c-lambda-real wrapper-args)))
-       (unless (,check retval)
-         (println (string-append "Unexpected return value from " ,@rest
-                                 ": " (object->string retval)))
-         (abort retval))
-       retval)))
+(define (c-final final l)
+  (lambda args
+    (let ((retval (apply l args)))
+      (finalize-with final retval)
+      retval)))
 
-(define-macro (c-lambda#final final args ret . rest)
-  `(lambda wrapper-args
-     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
-            (retval (apply ##c-lambda-real wrapper-args)))
-       (finalize-with ,final retval)
-       retval)))
-
-;; TODO clean up these macros
-(define-macro (c-lambda#checked-final check final args ret . rest)
-  `(lambda wrapper-args
-     (let* ((##c-lambda-real (c-lambda ,args ,ret ,@rest))
-            (retval (apply ##c-lambda-real wrapper-args)))
-       (unless (,check retval)
-         (println (string-append "Unexpected return value from " ,@rest
-                                   ": " (object->string retval)))
-         (abort retval))
-       (finalize-with ,final retval)
-       retval)))
+(define (c-checked check l)
+  (lambda args
+    (let ((retval (apply l args)))
+      (unless (check retval)
+        (println (string-append "Unexpected return value from " l
+                                ": " (object->string retval)))
+        (abort retval))
+      retval)))
 
 (define (true? p)
   (eq? #t p))
@@ -66,12 +52,6 @@
   (eq? #f p))
 (define (!false? p)
   (not (false? p)))
-
-(define-macro (c-lambda#debug stmt args ret . rest)
-  `(lambda wrapper-args
-     (let ((##c-lambda-real (c-lambda ,args ,ret ,@rest)))
-       (println ,stmt)
-       (apply ##c-lambda-real wrapper-args))))
 
 (define-macro (c-define-constants . consts)
   (let ((to-c-lambda (lambda (const)
