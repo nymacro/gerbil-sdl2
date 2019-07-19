@@ -6,6 +6,7 @@
   (block)
   (standard-bindings)
   (extended-bindings)
+  (fixnum)
   (not run-time-bindings)
   (not safe))
 
@@ -46,10 +47,10 @@
     result))
 
 ;;;; setup
-(define window-width 1024)
-(define window-height 768)
-(define block-width 24)
-(define block-height 24)
+(define window-width 800)
+(define window-height 600)
+(define block-width 8)
+(define block-height 8)
 
 (define arena-width (fx/ window-width block-width))
 (define arena-height (fx/ window-height block-height))
@@ -184,15 +185,13 @@
        (frame-counter (make-frame-counter current-time))
        (frame-rate 0)
        (pause #f)
-       (life-interval (make-interval 100 current-time
+       (life-interval (make-interval 50 current-time
                                           (lambda ()
                                             (unless pause
                                               (set! arena (life-tick arena))))))
-       (redisplay-interval (make-interval 100 current-time
+       (redisplay-interval (make-interval 50 current-time
                                           (lambda ()
                                             (arena-render arena renderer)
-                                            ;; prevent GC of window
-                                            ;; (SDL_GetWindowID window)
                                             (SDL_RenderPresent renderer)))))
 
   ;;;; main loop
@@ -237,6 +236,14 @@
                   (if pause
                     (displayln "Paused. Press space to unpause.")
                     (displayln "Unpaused. Press space to pause.")))
+                 ((fx= key-code SDLK_c)
+                  (arena-clear! arena))
+                 ((fx= key-code SDLK_r)
+                  ;; launch REPL on C-r
+                  (unless (zero? (bitwise-and (SDL_Keysym#mod keysym) KMOD_CTRL))
+                    (##continuation-capture
+                     (lambda (cont)
+                       (##repl-within cont #f #f)))))
                  ((fx= key-code SDLK_ESCAPE)
                   (displayln "Escape key pressed. Exiting")
                   (set! running #f))
