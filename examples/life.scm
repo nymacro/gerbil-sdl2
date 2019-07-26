@@ -7,7 +7,7 @@
   (standard-bindings)
   (extended-bindings)
   (fixnum)
-  (not run-time-bindings)
+  (run-time-bindings)
   (not safe))
 
 (##include "~~lib/_syntax.scm")
@@ -35,8 +35,8 @@
 ;;;; setup
 (define window-width 800)
 (define window-height 600)
-(define block-width 8)
-(define block-height 8)
+(define block-width 4)
+(define block-height 4)
 
 (define arena-width (fx/ window-width block-width))
 (define arena-height (fx/ window-height block-height))
@@ -131,6 +131,14 @@
          (neighbours (arena-surrounds-alive arena x y)))
     (life-tick-state alive neighbours)))
 
+;; (define other-arena (make-arena))
+;; (define-syntax swap!
+;;   (syntax-rules ()
+;;     ((_ a b)
+;;      (let ((c a))
+;;        (set! a b)
+;;        (set! b c)))))
+
 (define (life-tick arena)
   (let ((new-arena (make-arena)))
     (for-arena (x y)
@@ -184,6 +192,17 @@
 (define arena (make-arena))
 (arena-randomize! arena)
 
+(define-syntax with-mutex
+  (syntax-rules ()
+    ((_ mtx x xs ...)
+     (begin
+       (mutex-lock! mtx)
+       (dynamic-wind (lambda ()
+                       (mutex-unlock! mtx))
+                     (lambda ()
+                       x
+                       xs ...))))))
+
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
        (renderer (SDL_CreateRenderer window -1 SDL_RENDERER_SOFTWARE))
        (event (make-SDL_Event))
@@ -193,14 +212,25 @@
        (frame-counter (make-frame-counter current-time))
        (frame-rate 0)
        (pause #f)
-       (life-interval (make-interval 50 current-time
-                                          (lambda ()
-                                            (if pause
-                                              (set! arena (life-tick-pause arena))
-                                              (set! arena (life-tick arena))))))
+       (mtx (make-mutex))
+       (life-action (lambda ()
+                      (let loop ()
+                        (with-mutex mtx
+                          (if pause
+                            (set! arena (life-tick-pause arena))
+                            (set! arena (life-tick arena))))
+                        (SDL_Delay 25)
+                        (loop))))
+       (life-thread (make-thread life-tick "life"))
+       ;; (life-interval (make-interval 25 current-time
+       ;;                                    (lambda ()
+       ;;                                      (if pause
+       ;;                                        (set! arena (life-tick-pause arena))
+       ;;                                        (set! arena (life-tick arena))))))
        (redisplay-interval (make-interval 50 current-time
                                           (lambda ()
-                                            (arena-render arena renderer)
+                                            (with-mutex mtx
+                                              (arena-render arena renderer))
                                             (SDL_RenderPresent renderer)))))
 
   ;;;; main loop
