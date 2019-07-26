@@ -32,20 +32,6 @@
     ((str)
      (display str)(newline))))
 
-(define (vector-fold fn init vec)
-  (define (vector-iterate vec fn)
-    (let ((len (vector-length vec)))
-      (define (xdo idx)
-        (when (< idx len)
-          (fn idx (vector-ref vec idx))
-          (xdo (1+ idx))))
-      (xdo 0)))
-  (let ([result init])
-    (vector-iterate vec
-                    (lambda (idx v)
-                      (set! result (fn idx result v))))
-    result))
-
 ;;;; setup
 (define window-width 800)
 (define window-height 600)
@@ -55,16 +41,12 @@
 (define arena-width (fx/ window-width block-width))
 (define arena-height (fx/ window-height block-height))
 
-(define (draw-block x y renderer)
-  (SDL_SetRenderDrawColor renderer 255 0 0 255)
-  (SDL_RenderFillRect renderer (make-temp-rect x y block-width block-height)))
-  
-(define (draw-empty x y renderer)
-  (SDL_SetRenderDrawColor renderer 0 0 0 255)
+(define (draw-block x y renderer #!optional (intensity 0))
+  (SDL_SetRenderDrawColor renderer intensity 0 0 255)
   (SDL_RenderFillRect renderer (make-temp-rect x y block-width block-height)))
 
 (define (make-arena)
-  (make-vector (fx* arena-width arena-height) #f))
+  (make-u8vector (fx* arena-width arena-height) 0))
 
 (define (arena-idx* x y)
   (let ((xx (if (fx< x 0)
@@ -76,6 +58,17 @@
     (fx+ (fx* (fxmodulo yy arena-height) arena-width)
          (fxmodulo xx arena-width))))
 
+(define-syntax life-alive-p
+  (syntax-rules ()
+    ((_ x)
+     (fx= x 255))))
+(define-syntax life-drain
+  (syntax-rules ()
+    ((_ x)
+     (cond
+      ((fx> x 0) (max 0 (fx- x 8)))
+      (else 0)))))
+
 (define-syntax for-arena
   (syntax-rules ()
     ((for-arena (x y) stmt stmts ...)
@@ -85,26 +78,27 @@
          stmts ...)))))
 
 (define (arena-ref arena x y)
-  (vector-ref arena (arena-idx* x y)))
+  (u8vector-ref arena (arena-idx* x y)))
 
 (define (arena-set! arena x y v)
-  (vector-set! arena (arena-idx* x y) v))
+  (u8vector-set! arena (arena-idx* x y) v))
 
 (define (arena-randomize! arena)
   (for-arena (x y) 
     (let* ((random-value (random-integer 2))
-           (value (= 0 (modulo random-value 2))))
+           (value (if (fx= 0 (modulo random-value 2))
+                    0
+                    255)))
       (arena-set! arena x y value))))
 
 (define (arena-clear! arena)
   (for-arena (x y)
-    (arena-set! arena x y #f)))
+    (arena-set! arena x y 0)))
 
 (define (arena-render arena renderer)
   (for-arena (x y)
-    (if (arena-ref arena x y)
-      (draw-block (fx* block-width x) (fx* block-height y) renderer)
-      (draw-empty (fx* block-width x) (fx* block-height y) renderer))))
+    (let ((alive (arena-ref arena x y)))
+      (draw-block (fx* block-width x) (fx* block-height y) renderer alive))))
 
 (define (arena-display arena)
   (for (y 0 arena-height)
@@ -122,11 +116,15 @@
 ;;;; 3. Alive cells with greater than 3 neighbours die.
 ;;;; 4. Dead cells with exacly three live neighbours comes to life.
 (define (life-tick-state alive neighbours)
-  (cond
-   ((and alive (< neighbours 2)) #f)
-   ((and alive (> neighbours 3)) #f)
-   ((and (not alive) (= neighbours 3)) #t)
-   (else alive)))
+  (let ((alivep (life-alive-p alive)))
+    (cond
+     ((and alivep (< neighbours 2)) (life-drain alive))
+     ((and alivep (> neighbours 3)) (life-drain alive))
+     ((and (not alivep) (= neighbours 3)) 255)
+     (else
+      (if (life-alive-p alive)
+        alive
+        (life-drain alive))))))
 
 (define (life-tick-inner arena x y)
   (let* ((alive (arena-ref arena x y))
@@ -139,6 +137,15 @@
       (arena-set! new-arena x y (life-tick-inner arena x y)))        
     new-arena))
 
+(define (life-tick-pause arena)
+  (let ((new-arena (make-arena)))
+    (for-arena (x y)
+      (let ((alive (arena-ref arena x y)))
+        (arena-set! new-arena x y (if (life-alive-p alive)
+                                    alive
+                                    (life-drain alive)))))
+    new-arena))
+
 ;; return number of alive neighbours for a cell
 (define (arena-surrounds-alive arena x y)
   (let ((alive 0))
@@ -147,7 +154,7 @@
         (let* ((get-x (1- (fx+ x xx)))
                (get-y (1- (fx+ y yy)))
                (self (and (= get-x x) (= get-y y)))
-               (alivep (arena-ref arena get-x get-y)))
+               (alivep (life-alive-p (arena-ref arena get-x get-y))))
           (when (and alivep (not self))
             (set! alive (1+ alive))))))
     alive))
@@ -159,17 +166,17 @@
       (for (xx 0 3)
         (let ((get-x (1- (fx+ x xx)))
               (get-y (1- (fx+ y yy))))
-            (vector-set! result (fx+ xx (fx* yy 3))
+            (u8vector-set! result (fx+ xx (fx* yy 3))
                          (arena-ref arena get-x get-y)))))
     result)
-  (let ((result (make-vector (fx* 3 3) #f)))
+  (let ((result (make-u8vector (fx* 3 3) 0)))
     (doit result)))
 
 (define (arena-surrounds-display arena x y)
   (let ((surrounds (arena-surrounds arena x y)))
     (for (y 0 3)
       (for (x 0 3)
-        (if (vector-ref surrounds (fx+ x (fx* y 3)))
+        (if (u8vector-ref surrounds (fx+ x (fx* y 3)))
           (display "X")
           (display ".")))
       (newline))))
@@ -188,7 +195,8 @@
        (pause #f)
        (life-interval (make-interval 50 current-time
                                           (lambda ()
-                                            (unless pause
+                                            (if pause
+                                              (set! arena (life-tick-pause arena))
                                               (set! arena (life-tick arena))))))
        (redisplay-interval (make-interval 50 current-time
                                           (lambda ()
@@ -224,7 +232,9 @@
                      (block-x (fx/ x block-width))
                      (block-y (fx/ y block-height)))
                 (arena-set! arena block-x block-y
-                            (not (arena-ref arena block-x block-y)))))
+                            (if (life-alive-p (arena-ref arena block-x block-y))
+                              0
+                              255))))
              ((fx= event-type SDL_KEYDOWN)
               (let* ((keyboard-event (SDL_Event#key-ref event))
                      (keysym (SDL_KeyboardEvent#keysym-ref keyboard-event))
