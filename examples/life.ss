@@ -2,7 +2,7 @@
 ;;;; Copyright (C) 2019 Aaron Marks. All Rights Reserved.
 
 (import :std/crypto) ; for random-bytes
-(import :sdl2/sdl2)
+(import :nymacro/sdl2)
 (import :std/format)
 (import :std/sugar)
 (import :std/iter)

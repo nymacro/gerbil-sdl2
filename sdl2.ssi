@@ -1,8 +1,8 @@
 ;;; -*- Gerbil -*-
 ;;; (C)
 ;;; SDL2 FFI
-package: sdl2
+package: nymacro
 
 (export #t)
 
-(load-module "sdl2/sdl2")
+(load-module "nymacro/sdl2")

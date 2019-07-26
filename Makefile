@@ -8,7 +8,7 @@ SDL_LDFLAGS=$(LDFLAGS)
 TTF_LDFLAGS=$(LDFLAGS) -lSDL2_ttf
 IMG_LDFLAGS=$(LDFLAGS) -lSDL2_image
 
-GSC=gsc # -debug -debug-location -debug-source -trace-scheme
+GSC=gsc # -debug -debug-location -debug-source -track-scheme
 GSI=gsi
 
 all: sdl2.o1 sdl2-ttf.o1 sdl2-image.o1 examples/life

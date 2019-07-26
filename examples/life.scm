@@ -139,6 +139,7 @@
       (arena-set! new-arena x y (life-tick-inner arena x y)))        
     new-arena))
 
+;; return number of alive neighbours for a cell
 (define (arena-surrounds-alive arena x y)
   (let ((alive 0))
     (for (yy 0 3)
