@@ -35,8 +35,8 @@
 ;;;; setup
 (define window-width 800)
 (define window-height 600)
-(define block-width 4)
-(define block-height 4)
+(define block-width 8)
+(define block-height 8)
 
 (define arena-width (fx/ window-width block-width))
 (define arena-height (fx/ window-height block-height))
@@ -66,7 +66,7 @@
   (syntax-rules ()
     ((_ x)
      (cond
-      ((fx> x 0) (max 0 (fx- x 8)))
+      ((fx> x 0) (max 0 (fx- x 16)))
       (else 0)))))
 
 (define-syntax for-arena
@@ -212,20 +212,27 @@
        (pause #f)
        (mtx (make-mutex))
        (life-action (lambda ()
-                      (let loop ()
-                        (with-mutex mtx
-                          (if pause
-                            (set! arena (life-tick-pause arena))
-                            (set! arena (life-tick arena))))
-                        (SDL_Delay 25)
-                        (loop))))
-       (life-thread (thread-start! (make-thread life-action "life")))
+                      (let ((life-counter (make-frame-counter (SDL_GetTicks)))
+                            (last-rate 0))
+                        (let loop ()
+                          (let* ((current-time (SDL_GetTicks))
+                                 (count (life-counter current-time)))
+                            (when (not (fx= last-rate count))
+                              (displayln (string-append "life: " (object->string count)))
+                              (set! last-rate count)))
+                          (with-mutex mtx
+                            (if pause
+                              (set! arena (life-tick-pause arena))
+                              (set! arena (life-tick arena))))
+                          (thread-sleep! 0.02)
+                          (loop)))))
+       (life-thread (thread-start! (make-thread life-action "life-tick")))
        ;; (life-interval (make-interval 25 current-time
        ;;                                    (lambda ()
        ;;                                      (if pause
        ;;                                        (set! arena (life-tick-pause arena))
        ;;                                        (set! arena (life-tick arena))))))
-       (redisplay-interval (make-interval 50 current-time
+       (redisplay-interval (make-interval 0 current-time
                                           (lambda ()
                                             (with-mutex mtx
                                               (arena-render arena renderer))
@@ -235,7 +242,8 @@
   (let loop ()
     (let* ((current-time (SDL_GetTicks))
            (delay-time (frame-limiter current-time)))
-      (SDL_Delay delay-time)
+      ;; (SDL_Delay delay-time)
+      (thread-sleep! (/ delay-time 1000))
 
       ;; only display FPS on rate change
       (let ((new-frame-rate (frame-counter current-time)))
