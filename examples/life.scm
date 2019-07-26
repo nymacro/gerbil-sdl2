@@ -197,11 +197,9 @@
     ((_ mtx x xs ...)
      (begin
        (mutex-lock! mtx)
-       (dynamic-wind (lambda ()
-                       (mutex-unlock! mtx))
-                     (lambda ()
-                       x
-                       xs ...))))))
+       x
+       xs ...
+       (mutex-unlock! mtx)))))
 
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
        (renderer (SDL_CreateRenderer window -1 SDL_RENDERER_SOFTWARE))
@@ -221,7 +219,7 @@
                             (set! arena (life-tick arena))))
                         (SDL_Delay 25)
                         (loop))))
-       (life-thread (make-thread life-tick "life"))
+       (life-thread (thread-start! (make-thread life-action "life")))
        ;; (life-interval (make-interval 25 current-time
        ;;                                    (lambda ()
        ;;                                      (if pause
@@ -246,7 +244,7 @@
           (set! frame-rate new-frame-rate)))
 
       ;; run simulation and redraw
-      (life-interval current-time)
+      ;; (life-interval current-time)
       (redisplay-interval current-time)
 
       (let event-loop ()
