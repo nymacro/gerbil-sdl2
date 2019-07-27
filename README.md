@@ -48,6 +48,8 @@ make examples/life
 ./examples/life
 ```
 
+![Game of Life animation](/meta/life.gif)
+
 ### Gerbil
 
 ```sh

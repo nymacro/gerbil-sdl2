@@ -219,11 +219,11 @@
                       (let ((life-counter (make-frame-counter (SDL_GetTicks)))
                             (last-rate 0))
                         (let loop ()
-                          ;; (let* ((current-time (SDL_GetTicks))
-                          ;;        (count (life-counter current-time)))
-                          ;;   (when (not (fx= last-rate count))
-                          ;;     (displayln (string-append "life: " (object->string count)))
-                          ;;     (set! last-rate count)))
+                          (let* ((current-time (SDL_GetTicks))
+                                 (count (life-counter current-time)))
+                            (when (not (fx= last-rate count))
+                              (displayln (string-append "life: " (object->string count)))
+                              (set! last-rate count)))
                           (with-mutex mtx
                             (if pause
                               (set! arena (life-tick-pause arena))
@@ -231,11 +231,6 @@
                           (thread-sleep! 0.02)
                           (loop)))))
        (life-thread (thread-start! (make-thread life-action "life-tick")))
-       ;; (life-interval (make-interval 25 current-time
-       ;;                                    (lambda ()
-       ;;                                      (if pause
-       ;;                                        (set! arena (life-tick-pause arena))
-       ;;                                        (set! arena (life-tick arena))))))
        (redisplay-interval (make-interval 0 current-time
                                           (lambda ()
                                             (with-mutex mtx
@@ -246,17 +241,15 @@
   (let loop ()
     (let* ((current-time (SDL_GetTicks))
            (delay-time (frame-limiter current-time)))
-      ;; (SDL_Delay delay-time)
       (thread-sleep! (/ delay-time 1000))
 
       ;; only display FPS on rate change
-      ;; (let ((new-frame-rate (frame-counter current-time)))
-      ;;   (when (not (fx= frame-rate new-frame-rate))
-      ;;     (displayln (string-append "fps: " (object->string new-frame-rate)))
-      ;;     (set! frame-rate new-frame-rate)))
+      (let ((new-frame-rate (frame-counter current-time)))
+        (when (not (fx= frame-rate new-frame-rate))
+          (displayln (string-append "fps: " (object->string new-frame-rate)))
+          (set! frame-rate new-frame-rate)))
 
-      ;; run simulation and redraw
-      ;; (life-interval current-time)
+      ;; redraw
       (redisplay-interval current-time)
 
       (let event-loop ()
@@ -281,7 +274,8 @@
                      (key-code (SDL_Keysym#sym keysym)))
                 (cond
                  ((fx= key-code SDLK_RETURN)
-                  (arena-randomize! arena))
+                  (with-mutex mtx
+                    (arena-randomize! arena)))
                  ((fx= key-code SDLK_SPACE)
                   (set! pause (not pause))
                   (if pause
@@ -293,23 +287,20 @@
                   ;; launch REPL on C-r
                   (unless (zero? (bitwise-and (SDL_Keysym#mod keysym) KMOD_CTRL))
                     (when fullscreen toggle-fullscreen)
-                    (thread-start!
-                     (make-thread
-                      (lambda ()
-                        (##continuation-capture
-                         (lambda (cont)
-                           (##repl-within cont #f #f))))))))
+                    (##continuation-capture
+                     (lambda (cont)
+                       (##repl-within cont #f #f)))))
                  ((fx= key-code SDLK_ESCAPE)
                   (displayln "Escape key pressed. Exiting")
                   (set! running #f))
                  ((fx= key-code SDLK_f)
                   (toggle-fullscreen))
-                 ;; (else
-                 ;;  (displayln (string-append "Unhandled key:"
-                 ;;                            (object->string (if (< key-code 256)
-                 ;;                                              (integer->char key-code)
-                 ;;                                              key-code)))))
-                 )))
+                 (else
+                  (displayln (string-append "Unhandled key:"
+                                            (object->string (if (< key-code 256)
+                                                              (integer->char key-code)
+                                                              key-code))))))))
+                 
              ((fx= event-type SDL_QUIT) (set! running #f)))
             (event-loop)))))
 
