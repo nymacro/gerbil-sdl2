@@ -202,6 +202,10 @@
        (mutex-unlock! mtx)))))
 
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
+       (fullscreen #f)
+       (toggle-fullscreen (lambda ()
+                            (set! fullscreen (not fullscreen))
+                            (SDL_SetWindowFullscreen window (if fullscreen SDL_TRUE SDL_FALSE))))
        (renderer (SDL_CreateRenderer window -1 SDL_RENDERER_SOFTWARE))
        (event (make-SDL_Event))
        (running #t)
@@ -215,11 +219,11 @@
                       (let ((life-counter (make-frame-counter (SDL_GetTicks)))
                             (last-rate 0))
                         (let loop ()
-                          (let* ((current-time (SDL_GetTicks))
-                                 (count (life-counter current-time)))
-                            (when (not (fx= last-rate count))
-                              (displayln (string-append "life: " (object->string count)))
-                              (set! last-rate count)))
+                          ;; (let* ((current-time (SDL_GetTicks))
+                          ;;        (count (life-counter current-time)))
+                          ;;   (when (not (fx= last-rate count))
+                          ;;     (displayln (string-append "life: " (object->string count)))
+                          ;;     (set! last-rate count)))
                           (with-mutex mtx
                             (if pause
                               (set! arena (life-tick-pause arena))
@@ -246,10 +250,10 @@
       (thread-sleep! (/ delay-time 1000))
 
       ;; only display FPS on rate change
-      (let ((new-frame-rate (frame-counter current-time)))
-        (when (not (fx= frame-rate new-frame-rate))
-          (displayln (string-append "fps: " (object->string new-frame-rate)))
-          (set! frame-rate new-frame-rate)))
+      ;; (let ((new-frame-rate (frame-counter current-time)))
+      ;;   (when (not (fx= frame-rate new-frame-rate))
+      ;;     (displayln (string-append "fps: " (object->string new-frame-rate)))
+      ;;     (set! frame-rate new-frame-rate)))
 
       ;; run simulation and redraw
       ;; (life-interval current-time)
@@ -288,17 +292,24 @@
                  ((fx= key-code SDLK_r)
                   ;; launch REPL on C-r
                   (unless (zero? (bitwise-and (SDL_Keysym#mod keysym) KMOD_CTRL))
-                    (##continuation-capture
-                     (lambda (cont)
-                       (##repl-within cont #f #f)))))
+                    (when fullscreen toggle-fullscreen)
+                    (thread-start!
+                     (make-thread
+                      (lambda ()
+                        (##continuation-capture
+                         (lambda (cont)
+                           (##repl-within cont #f #f))))))))
                  ((fx= key-code SDLK_ESCAPE)
                   (displayln "Escape key pressed. Exiting")
                   (set! running #f))
-                 (else
-                  (displayln (string-append "Unhandled key:"
-                                            (object->string (if (< key-code 256)
-                                                              (integer->char key-code)
-                                                              key-code))))))))
+                 ((fx= key-code SDLK_f)
+                  (toggle-fullscreen))
+                 ;; (else
+                 ;;  (displayln (string-append "Unhandled key:"
+                 ;;                            (object->string (if (< key-code 256)
+                 ;;                                              (integer->char key-code)
+                 ;;                                              key-code)))))
+                 )))
              ((fx= event-type SDL_QUIT) (set! running #f)))
             (event-loop)))))
 
