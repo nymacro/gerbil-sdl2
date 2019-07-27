@@ -1,4 +1,4 @@
-;;;; gambit-sdl2 life
+;;;; gambit-sdl2 Game of Life
 ;;;; Copyright (C) 2019 Aaron Marks. All Rights Reserved.
 
 (declare
@@ -210,25 +210,28 @@
        (event (make-SDL_Event))
        (running #t)
        (current-time (SDL_GetTicks))
-       (frame-limiter (make-frame-limiter 60 current-time))
+       (frame-limiter (make-frame-limiter 30 current-time))
        (frame-counter (make-frame-counter current-time))
        (frame-rate 0)
        (pause #f)
        (mtx (make-mutex))
        (life-action (lambda ()
-                      (let ((life-counter (make-frame-counter (SDL_GetTicks)))
-                            (last-rate 0))
+                      (let* ((current-time (SDL_GetTicks))
+                             (life-counter (make-frame-counter current-time))
+                             (life-limiter (make-frame-limiter 60 current-time))
+                             (last-rate 0))
                         (let loop ()
                           (let* ((current-time (SDL_GetTicks))
-                                 (count (life-counter current-time)))
+                                 (count (life-counter current-time))
+                                 (delay-time (life-limiter current-time)))
                             (when (not (fx= last-rate count))
                               (displayln (string-append "life: " (object->string count)))
-                              (set! last-rate count)))
-                          (with-mutex mtx
-                            (if pause
-                              (set! arena (life-tick-pause arena))
-                              (set! arena (life-tick arena))))
-                          (thread-sleep! 0.02)
+                              (set! last-rate count))
+                            (thread-sleep! (/ delay-time 1000))
+                            (with-mutex mtx
+                              (if pause
+                                (set! arena (life-tick-pause arena))
+                                (set! arena (life-tick arena)))))
                           (loop)))))
        (life-thread (thread-start! (make-thread life-action "life-tick")))
        (redisplay-interval (make-interval 0 current-time
