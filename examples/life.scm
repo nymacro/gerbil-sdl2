@@ -20,9 +20,9 @@
 
 ;;;; helper functions
 (define (1+ x) (+ x 1))
-(define (fx1+ x) (1+ x))
+(define (fx1+ x) (fx+ x 1))
 (define (1- x) (- x 1))
-(define (fx1- x) (1- x))
+(define (fx1- x) (fx- x 1))
 (define fx/ fxquotient)
 
 (define displayln
@@ -31,6 +31,15 @@
      (display str port)(newline port))
     ((str)
      (display str)(newline))))
+
+(define-syntax with-mutex
+  (syntax-rules ()
+    ((_ mtx x xs ...)
+     (begin
+       (mutex-lock! mtx)
+       x
+       xs ...
+       (mutex-unlock! mtx)))))
 
 ;;;; setup
 (define window-width 800)
@@ -131,14 +140,6 @@
          (neighbours (arena-surrounds-alive arena x y)))
     (life-tick-state alive neighbours)))
 
-;; (define other-arena (make-arena))
-;; (define-syntax swap!
-;;   (syntax-rules ()
-;;     ((_ a b)
-;;      (let ((c a))
-;;        (set! a b)
-;;        (set! b c)))))
-
 (define (life-tick arena)
   (let ((new-arena (make-arena)))
     (for-arena (x y)
@@ -167,39 +168,8 @@
             (set! alive (1+ alive))))))
     alive))
 
-;; return a 3x3 vector of surrounds
-(define (arena-surrounds arena x y)
-  (define (doit result)
-    (for (yy 0 3)
-      (for (xx 0 3)
-        (let ((get-x (1- (fx+ x xx)))
-              (get-y (1- (fx+ y yy))))
-            (u8vector-set! result (fx+ xx (fx* yy 3))
-                         (arena-ref arena get-x get-y)))))
-    result)
-  (let ((result (make-u8vector (fx* 3 3) 0)))
-    (doit result)))
-
-(define (arena-surrounds-display arena x y)
-  (let ((surrounds (arena-surrounds arena x y)))
-    (for (y 0 3)
-      (for (x 0 3)
-        (if (u8vector-ref surrounds (fx+ x (fx* y 3)))
-          (display "X")
-          (display ".")))
-      (newline))))
-
 (define arena (make-arena))
 (arena-randomize! arena)
-
-(define-syntax with-mutex
-  (syntax-rules ()
-    ((_ mtx x xs ...)
-     (begin
-       (mutex-lock! mtx)
-       x
-       xs ...
-       (mutex-unlock! mtx)))))
 
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
        (fullscreen #f)
@@ -240,7 +210,7 @@
                                               (arena-render arena renderer))
                                             (SDL_RenderPresent renderer)))))
 
-  ;;;; main loop
+  ;; main loop
   (let loop ()
     (let* ((current-time (SDL_GetTicks))
            (delay-time (frame-limiter current-time)))

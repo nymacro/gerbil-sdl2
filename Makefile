@@ -31,5 +31,10 @@ sdl2-image.o1: sdl2-image.scm sdl2-prelude.scm
 examples/life: examples/life.scm examples/life_shared.scm sdl2.o1 # sdl2-ttf.o1
 	$(GSC) -exe -cc-options "$(CCFLAGS)" -ld-options "$(LDFLAGS)" -e '(##include "~~lib/_syntax.scm")' examples/life.scm
 
+gsi-life:
+	$(GSI) -e '(##include "~~lib/_syntax.scm")' examples/life.scm
+
 clean:
-	-rm *.c *.o* examples/life
+	-rm *.c
+	-rm *.o*
+	-rm examples/life

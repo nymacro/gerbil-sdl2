@@ -1378,8 +1378,8 @@
 (define SDL_CreateSemaphore (c-lambda (unsigned-int32) SDL_sem* "SDL_CreateSemaphore"))
 (define SDL_CreateSoftwareRenderer (c-lambda (SDL_Surface*) SDL_Renderer* "SDL_CreateSoftwareRenderer"))
 (define SDL_CreateSystemCursor (c-lambda (SDL_SystemCursor) SDL_Cursor* "SDL_CreateSystemCursor"))
-(define SDL_CreateTexture (c-lambda (SDL_Renderer* unsigned-int32 int int int) SDL_Texture* "SDL_CreateTexture"))
-(define SDL_CreateTextureFromSurface (c-lambda (SDL_Renderer* SDL_Surface*) SDL_Texture* "SDL_CreateTextureFromSurface"))
+(define SDL_CreateTexture (c-final SDL_DestroyTexture (c-lambda (SDL_Renderer* unsigned-int32 int int int) SDL_Texture* "SDL_CreateTexture")))
+(define SDL_CreateTextureFromSurface (c-final SDL_DestroyTexture (c-lambda (SDL_Renderer* SDL_Surface*) SDL_Texture* "SDL_CreateTextureFromSurface")))
 (cond-expand
  (sdl:threads
   (define SDL_CreateThread (c-lambda (SDL_ThreadFunction nonnull-char-string void*) SDL_Thread* "SDL_CreateThread")))
