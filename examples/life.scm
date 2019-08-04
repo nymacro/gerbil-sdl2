@@ -36,10 +36,12 @@
   (syntax-rules ()
     ((_ mtx x xs ...)
      (begin
-       (mutex-lock! mtx)
-       x
-       xs ...
-       (mutex-unlock! mtx)))))
+       (dynamic-wind
+         (lambda () (mutex-lock! mtx))
+         (lambda () (mutex-unlock! mtx))
+         (lambda ()
+           x
+           xs ...))))))
 
 ;;;; setup
 (define window-width 800)
@@ -203,27 +205,22 @@
                                 (set! arena (life-tick-pause arena))
                                 (set! arena (life-tick arena)))))
                           (loop)))))
-       (life-thread (thread-start! (make-thread life-action "life-tick")))
-       (redisplay-interval (make-interval 0 current-time
-                                          (lambda ()
-                                            (with-mutex mtx
-                                              (arena-render arena renderer))
-                                            (SDL_RenderPresent renderer)))))
+       (life-thread (thread-start! (make-thread life-action "life-tick"))))
 
   ;; main loop
   (let loop ()
     (let* ((current-time (SDL_GetTicks))
-           (delay-time (frame-limiter current-time)))
+           (delay-time (frame-limiter current-time))
+           (new-frame-rate (frame-counter current-time)))
+      (when (not (fx= frame-rate new-frame-rate))
+        (displayln (string-append "fps: " (object->string new-frame-rate)))
+        (set! frame-rate new-frame-rate))
       (thread-sleep! (/ delay-time 1000))
 
-      ;; only display FPS on rate change
-      (let ((new-frame-rate (frame-counter current-time)))
-        (when (not (fx= frame-rate new-frame-rate))
-          (displayln (string-append "fps: " (object->string new-frame-rate)))
-          (set! frame-rate new-frame-rate)))
-
       ;; redraw
-      (redisplay-interval current-time)
+      (with-mutex mtx
+        (arena-render arena renderer)
+        (SDL_RenderPresent renderer))
 
       (let event-loop ()
         (let* ((e (SDL_PollEvent event))
@@ -237,10 +234,11 @@
                      (y (SDL_MouseButtonEvent#y button-event))
                      (block-x (fx/ x block-width))
                      (block-y (fx/ y block-height)))
-                (arena-set! arena block-x block-y
-                            (if (life-alive-p (arena-ref arena block-x block-y))
-                              0
-                              255))))
+                (with-mutex mtx
+                  (arena-set! arena block-x block-y
+                              (if (life-alive-p (arena-ref arena block-x block-y))
+                                0
+                                255)))))
              ((fx= event-type SDL_KEYDOWN)
               (let* ((keyboard-event (SDL_Event#key-ref event))
                      (keysym (SDL_KeyboardEvent#keysym-ref keyboard-event))
