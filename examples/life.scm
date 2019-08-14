@@ -38,10 +38,11 @@
      (begin
        (dynamic-wind
          (lambda () (mutex-lock! mtx))
-         (lambda () (mutex-unlock! mtx))
          (lambda ()
            x
-           xs ...))))))
+           xs ...)
+         (lambda () (mutex-unlock! mtx)))))))
+
 
 ;;;; setup
 (define window-width 800)
