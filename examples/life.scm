@@ -276,7 +276,8 @@
              ((fx= event-type SDL_QUIT) (set! running #f)))
             (event-loop)))))
 
-    (when running (loop))))
+    (when running (loop)))
+  (thread-terminate! life-thread))
 
 (##gc)
 (SDL_Quit)
