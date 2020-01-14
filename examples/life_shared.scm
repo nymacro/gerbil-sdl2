@@ -8,7 +8,7 @@
          (when (< var end)
            (begin
              stmt ...)
-           (set! var (1+ var))
+           (set! var (fx1+ var))
            (loop)))))))
 
 

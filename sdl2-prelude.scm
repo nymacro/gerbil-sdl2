@@ -23,6 +23,7 @@
     (sdl2-untie p)
     (final p)))
 
+;; helper to attach a finalizer to a Scheme object
 (define-macro (finalize-with finalizer value)
   `(begin
      (make-will ,value (lambda (x)
@@ -31,12 +32,14 @@
                          (,finalizer x)))
      ,value))
 
+;; wrapper function for adding finalizer
 (define (c-final final l)
   (lambda args
     (let ((retval (apply l args)))
       (finalize-with final retval)
       retval)))
 
+;; wrapped function for adding return value checking
 (define (c-checked check l)
   (lambda args
     (let ((retval (apply l args)))
@@ -151,7 +154,8 @@ end-of-string
 (define-macro (c-define-type* name type)
   `(begin
      (c-define-type ,name ,type)
-     (c-define-type ,(string->symbol (string-append (symbol->string name) "*")) (pointer ,name))))
+     (c-define-type ,(string->symbol (string-append (symbol->string name) "*")) (pointer ,name))
+     (c-define-type ,(string->symbol (string-append (symbol->string name) "**")) (pointer (pointer ,name)))))
 
 ;;------------------------------------------------------------------------------
 ;;!! Types
@@ -200,7 +204,6 @@ end-of-string
 (c-define-type* SDL_mutex (struct "SDL_mutex"))
 (c-define-type SDL_PowerState int) ; enum
 (c-define-type* SDL_Renderer (struct "SDL_Renderer"))
-(c-define-type SDL_Renderer** (pointer SDL_Renderer*))
 (c-define-type SDL_RendererFlip int) ; enum
 (c-define-type* SDL_RWops (struct "SDL_RWops"))
 (c-define-type SDL_Scancode int) ; enum
@@ -217,7 +220,6 @@ end-of-string
 (c-define-type SDL_TimerID int)
 (c-define-type SDL_TouchID int64)
 (c-define-type* SDL_Window (struct "SDL_Window"))
-(c-define-type SDL_Window** (pointer SDL_Window*))
 
 (c-define-type* SDL_AudioCVT (struct "SDL_AudioCVT"))
 (c-define-type* SDL_AudioSpec (struct "SDL_AudioSpec"))

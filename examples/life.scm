@@ -19,9 +19,7 @@
 (SDL_Init SDL_INIT_VIDEO)
 
 ;;;; helper functions
-(define (1+ x) (+ x 1))
 (define (fx1+ x) (fx+ x 1))
-(define (1- x) (- x 1))
 (define (fx1- x) (fx- x 1))
 (define fx/ fxquotient)
 
@@ -59,6 +57,17 @@
 
 (define (make-arena)
   (make-u8vector (fx* arena-width arena-height) 0))
+
+;; cache of "arenas" to swap between for reuse
+(define (make-arena-buffered)
+  (let ((arenas (list (make-arena) (make-arena)))
+        (index 0))
+    (define (next-arena)
+      (set! index (fxmodulo (fx1+ index) 2))
+      (list-ref arenas index))
+    next-arena))
+
+(define get-next-arena (make-arena-buffered))
 
 (define (arena-idx* x y)
   (let ((xx (if (fx< x 0)
@@ -144,13 +153,13 @@
     (life-tick-state alive neighbours)))
 
 (define (life-tick arena)
-  (let ((new-arena (make-arena)))
+  (let ((new-arena (get-next-arena)))
     (for-arena (x y)
       (arena-set! new-arena x y (life-tick-inner arena x y)))        
     new-arena))
 
 (define (life-tick-pause arena)
-  (let ((new-arena (make-arena)))
+  (let ((new-arena (get-next-arena)))
     (for-arena (x y)
       (let ((alive (arena-ref arena x y)))
         (arena-set! new-arena x y (if (life-alive-p alive)
@@ -163,16 +172,18 @@
   (let ((alive 0))
     (for (yy 0 3)
       (for (xx 0 3)
-        (let* ((get-x (1- (fx+ x xx)))
-               (get-y (1- (fx+ y yy)))
+        (let* ((get-x (fx1- (fx+ x xx)))
+               (get-y (fx1- (fx+ y yy)))
                (self (and (= get-x x) (= get-y y)))
                (alivep (life-alive-p (arena-ref arena get-x get-y))))
           (when (and alivep (not self))
-            (set! alive (1+ alive))))))
+            (set! alive (fx1+ alive))))))
     alive))
 
-(define arena (make-arena))
+(define arena (get-next-arena))
 (arena-randomize! arena)
+
+;; (gc-report-set! #t)
 
 (let* ((window (SDL_CreateWindow "Game of Life" 0 0 window-width window-height 0))
        (fullscreen #f)
@@ -258,7 +269,7 @@
                  ((fx= key-code SDLK_r)
                   ;; launch REPL on C-r
                   (unless (zero? (bitwise-and (SDL_Keysym#mod keysym) KMOD_CTRL))
-                    (when fullscreen toggle-fullscreen)
+                    (when fullscreen (toggle-fullscreen))
                     (##continuation-capture
                      (lambda (cont)
                        (##repl-within cont #f #f)))))
